@@ -1,0 +1,155 @@
+"use client";
+
+import { useState } from "react";
+import { Users, Plus, Lock } from "lucide-react";
+import {
+  cohorts,
+  disciplines,
+  getUserById,
+  getDisciplineById,
+  MOCK_CURRENT_USER_ID,
+  users,
+} from "@/lib/mock-data";
+import VerifiedAvatar from "@/components/VerifiedAvatar";
+import { useAuth } from "@/lib/auth-context";
+import { cn } from "@/lib/utils";
+
+export default function FoundryPage() {
+  const { profileCompleted } = useAuth();
+  const [showForm, setShowForm] = useState(false);
+  const currentUser = users.find((u) => u.id === MOCK_CURRENT_USER_ID);
+
+  return (
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-white mb-1">Foundry</h1>
+          <p className="text-sm" style={{ color: "#8b8b9e" }}>
+            Open cohorts looking for builders. Request to join or start your own.
+          </p>
+        </div>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className={cn(
+            "flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold flex-shrink-0 transition-opacity",
+            profileCompleted ? "text-white hover:opacity-90" : "opacity-50 cursor-not-allowed text-white"
+          )}
+          style={{ background: "linear-gradient(135deg, #6633ee, #7744ff)" }}
+          title={!profileCompleted ? "Complete your profile first" : undefined}
+        >
+          <Plus size={15} />
+          Start a cohort
+        </button>
+      </div>
+
+      {/* Profile gate banner */}
+      {!profileCompleted && (
+        <div
+          className="flex items-center gap-3 px-4 py-3 rounded-xl mb-6 text-sm"
+          style={{ backgroundColor: "#1a1a28", border: "1px solid #2e2e44" }}
+        >
+          <Lock size={14} style={{ color: "#a78bfa" }} />
+          <span style={{ color: "#8b8b9e" }}>
+            Complete your profile to start a cohort or request to join one.
+          </span>
+          <a href={`/profile/${MOCK_CURRENT_USER_ID}`} className="ml-auto text-xs font-semibold flex-shrink-0" style={{ color: "#a78bfa" }}>
+            Complete →
+          </a>
+        </div>
+      )}
+
+      {/* Cohort cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {cohorts.map((cohort) => {
+          const disc = getDisciplineById(cohort.disciplineId);
+          const members = cohort.memberIds.map(getUserById).filter(Boolean);
+          const spotsLeft = cohort.teamSize - cohort.memberIds.length;
+          const isMember = cohort.memberIds.includes(MOCK_CURRENT_USER_ID);
+
+          return (
+            <div
+              key={cohort.id}
+              className="rounded-2xl border p-5 flex flex-col gap-4"
+              style={{ backgroundColor: "#111118", borderColor: "#1e1e2e" }}
+            >
+              {/* Discipline badge */}
+              {disc && (
+                <span
+                  className="self-start text-xs font-medium px-2.5 py-1 rounded-full"
+                  style={{ backgroundColor: disc.color + "22", color: disc.color }}
+                >
+                  {disc.name}
+                </span>
+              )}
+
+              {/* Title + goal */}
+              <div>
+                <h3 className="text-sm font-bold text-white mb-1.5">{cohort.title}</h3>
+                <p className="text-xs leading-relaxed" style={{ color: "#c4c4d4" }}>
+                  {cohort.goal}
+                </p>
+              </div>
+
+              {/* Members */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs flex items-center gap-1" style={{ color: "#8b8b9e" }}>
+                    <Users size={12} />
+                    {cohort.memberIds.length}/{cohort.teamSize} members
+                  </span>
+                  <span className="text-xs font-medium" style={{ color: spotsLeft > 0 ? "#6633ee" : "#8b8b9e" }}>
+                    {spotsLeft > 0 ? `${spotsLeft} spot${spotsLeft !== 1 ? "s" : ""} open` : "Full"}
+                  </span>
+                </div>
+                <div className="flex -space-x-1.5">
+                  {members.map((m) =>
+                    m ? <VerifiedAvatar key={m.id} name={m.name} verified={m.verified} size="sm" /> : null
+                  )}
+                  {Array.from({ length: Math.max(0, spotsLeft) }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                      style={{ backgroundColor: "#1a1a28", border: "2px dashed #2e2e44", color: "#8b8b9e" }}
+                    >
+                      ?
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Open roles */}
+              {cohort.rolesOpen.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {cohort.rolesOpen.map((role) => (
+                    <span
+                      key={role}
+                      className="text-xs px-2 py-0.5 rounded-full font-medium"
+                      style={{ backgroundColor: "#6633ee22", color: "#a78bfa", border: "1px solid #6633ee44" }}
+                    >
+                      {role}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* CTA */}
+              <button
+                className={cn(
+                  "mt-auto w-full py-2 rounded-xl text-xs font-semibold transition-opacity",
+                  isMember ? "text-white opacity-50 cursor-not-allowed" :
+                  profileCompleted ? "text-white hover:opacity-90" :
+                  "text-white opacity-40 cursor-not-allowed"
+                )}
+                style={{ background: "linear-gradient(135deg, #6633ee, #7744ff)" }}
+                disabled={!profileCompleted || isMember}
+              >
+                {isMember ? "You're a member" : "Request to join"}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

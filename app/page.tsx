@@ -9,8 +9,8 @@ export default function LandingPage() {
   const router = useRouter();
   const [activeType, setActiveType] = useState<"hardware" | "software">("hardware");
 
-  const hardwareCount = projects.filter((p) => p.type === "hardware").length;
-  const softwareCount = projects.filter((p) => p.type === "software").length;
+  const hardwareCount = projects.filter((p) => p.kind === "hardware").length;
+  const softwareCount = projects.filter((p) => p.kind === "software").length;
 
   return (
     <div className="min-h-[calc(100vh-56px)] flex flex-col">
