@@ -1,0 +1,240 @@
+"use client";
+
+import { useParams, useRouter } from "next/navigation";
+import { ArrowLeft, MapPin, GraduationCap, Trophy, Zap } from "lucide-react";
+import { getUserById, getProjectsByIds } from "@/lib/mock-data";
+import VerifiedAvatar from "@/components/VerifiedAvatar";
+import ProjectCard from "@/components/ProjectCard";
+
+const AVAILABILITY_STYLES: Record<string, { bg: string; text: string; dot: string }> = {
+  "Looking for projects": {
+    bg: "bg-sky-500/15",
+    text: "text-sky-400",
+    dot: "bg-sky-400",
+  },
+  "Looking for team members": {
+    bg: "bg-emerald-500/15",
+    text: "text-emerald-400",
+    dot: "bg-emerald-400",
+  },
+  "Looking for internship": {
+    bg: "bg-amber-500/15",
+    text: "text-amber-400",
+    dot: "bg-amber-400",
+  },
+  "Not available": {
+    bg: "bg-zinc-500/15",
+    text: "text-zinc-400",
+    dot: "bg-zinc-400",
+  },
+};
+
+export default function ProfilePage() {
+  const params = useParams();
+  const router = useRouter();
+  const user = getUserById(params.id as string);
+
+  if (!user) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-24 text-center">
+        <p className="text-white font-medium mb-2">User not found</p>
+        <button
+          onClick={() => router.push("/feed")}
+          className="text-sm"
+          style={{ color: "#6633ee" }}
+        >
+          Back to projects
+        </button>
+      </div>
+    );
+  }
+
+  const userProjects = getProjectsByIds(user.projectIds);
+  const avail = AVAILABILITY_STYLES[user.availability];
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+      {/* Back */}
+      <button
+        onClick={() => router.back()}
+        className="flex items-center gap-1.5 text-sm mb-6 transition-colors hover:text-white"
+        style={{ color: "#8b8b9e" }}
+      >
+        <ArrowLeft size={15} />
+        Back
+      </button>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Left: identity card */}
+        <div className="md:col-span-1 flex flex-col gap-4">
+          <div
+            className="rounded-2xl border p-6 flex flex-col items-center text-center gap-4"
+            style={{ backgroundColor: "#111118", borderColor: "#1e1e2e" }}
+          >
+            <VerifiedAvatar
+              name={user.name}
+              verified={user.verified}
+              size="xl"
+            />
+
+            <div>
+              <h1 className="text-base font-bold text-white mb-0.5">
+                {user.name}
+              </h1>
+              {user.verified && (
+                <span
+                  className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
+                  style={{
+                    background: "linear-gradient(135deg, #6633ee22, #7744ff22)",
+                    color: "#a78bfa",
+                    border: "1px solid #6633ee44",
+                  }}
+                >
+                  ✓ Verified builder
+                </span>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1 w-full text-left">
+              <div
+                className="flex items-center gap-2 text-xs"
+                style={{ color: "#8b8b9e" }}
+              >
+                <GraduationCap size={13} style={{ color: "#6633ee" }} />
+                {user.school}
+              </div>
+              <div
+                className="flex items-center gap-2 text-xs"
+                style={{ color: "#8b8b9e" }}
+              >
+                <MapPin size={13} style={{ color: "#6633ee" }} />
+                {user.country}
+              </div>
+              <div
+                className="flex items-center gap-2 text-xs"
+                style={{ color: "#8b8b9e" }}
+              >
+                <Zap size={13} style={{ color: "#6633ee" }} />
+                {user.major}
+              </div>
+            </div>
+
+            {/* Builder score */}
+            <div
+              className="w-full rounded-xl p-3 text-center"
+              style={{
+                background: "linear-gradient(135deg, #6633ee15, #7744ff15)",
+                border: "1px solid #6633ee33",
+              }}
+            >
+              <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                <Trophy size={14} style={{ color: "#a78bfa" }} />
+                <span className="text-xl font-bold text-white">
+                  {user.builderScore}
+                </span>
+              </div>
+              <span className="text-xs" style={{ color: "#a78bfa" }}>
+                Builder Score
+              </span>
+            </div>
+
+            {/* Availability */}
+            <span
+              className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full ${avail.bg} ${avail.text}`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${avail.dot}`} />
+              {user.availability}
+            </span>
+          </div>
+
+          {/* Interests */}
+          <div
+            className="rounded-2xl border p-5"
+            style={{ backgroundColor: "#111118", borderColor: "#1e1e2e" }}
+          >
+            <h2 className="text-sm font-semibold text-white mb-3">
+              Interests
+            </h2>
+            <div className="flex flex-wrap gap-1.5">
+              {user.interests.map((interest) => (
+                <span
+                  key={interest}
+                  className="text-xs px-2.5 py-1 rounded-full"
+                  style={{ backgroundColor: "#1a1a28", color: "#8b8b9e" }}
+                >
+                  {interest}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Right: skills + projects */}
+        <div className="md:col-span-2 flex flex-col gap-6">
+          {/* Skills */}
+          <div
+            className="rounded-2xl border p-5"
+            style={{ backgroundColor: "#111118", borderColor: "#1e1e2e" }}
+          >
+            <h2 className="text-sm font-semibold text-white mb-4">Skills</h2>
+            <div className="flex flex-col gap-3">
+              {user.skills.map((skill) => (
+                <div key={skill.name}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-white">{skill.name}</span>
+                    <span
+                      className="text-xs font-semibold"
+                      style={{ color: "#a78bfa" }}
+                    >
+                      {skill.rating}/10
+                    </span>
+                  </div>
+                  <div
+                    className="w-full h-1.5 rounded-full overflow-hidden"
+                    style={{ backgroundColor: "#1e1e2e" }}
+                  >
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${(skill.rating / 10) * 100}%`,
+                        background:
+                          skill.rating >= 8
+                            ? "linear-gradient(90deg, #6633ee, #a855f7)"
+                            : skill.rating >= 6
+                            ? "linear-gradient(90deg, #3b82f6, #6366f1)"
+                            : "linear-gradient(90deg, #0ea5e9, #3b82f6)",
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Projects */}
+          <div>
+            <h2 className="text-sm font-semibold text-white mb-3">
+              Projects
+            </h2>
+            {userProjects.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {userProjects.map((project) => (
+                  <ProjectCard key={project.id} project={project} />
+                ))}
+              </div>
+            ) : (
+              <div
+                className="rounded-2xl border p-8 text-center"
+                style={{ backgroundColor: "#111118", borderColor: "#1e1e2e" }}
+              >
+                <p className="text-sm" style={{ color: "#8b8b9e" }}>
+                  No projects yet
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
