@@ -29,6 +29,7 @@ function getAvatarColor(name: string) {
 
 interface VerifiedAvatarProps {
   name: string;
+  avatarUrl?: string;
   verified?: boolean;
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
@@ -43,15 +44,23 @@ const sizeMap = {
 
 export default function VerifiedAvatar({
   name,
+  avatarUrl,
   verified = false,
   size = "md",
   className,
 }: VerifiedAvatarProps) {
   const { outer, text, ring } = sizeMap[size];
-  const initials = getInitials(name);
-  const color = getAvatarColor(name);
+  const initials = getInitials(name) || "?";
+  const color = getAvatarColor(name || "?");
 
-  const inner = (
+  const inner = avatarUrl ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={avatarUrl}
+      alt={name || "Avatar"}
+      className="w-full h-full object-cover select-none"
+    />
+  ) : (
     <div
       className={cn(
         "rounded-full flex items-center justify-center font-semibold text-white select-none w-full h-full",

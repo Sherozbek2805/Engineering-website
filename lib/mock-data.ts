@@ -2,6 +2,8 @@
 
 export type Skill = { name: string; rating: number };
 
+export type PortfolioItem = { title: string; url: string };
+
 export type User = {
   id: string;
   name: string;
@@ -9,17 +11,22 @@ export type User = {
   country: string;
   region: string;
   major: string;
+  bio: string;
   avatarUrl: string;
   verified: boolean;
   builderScore: number;
   skills: Skill[];
   interests: string[];
+  portfolio: PortfolioItem[];
+  githubUrl: string;
+  linkedinUrl: string;
   availability:
     | "Looking for projects"
     | "Looking for team members"
     | "Looking for internship"
     | "Not available";
   profileCompleted: boolean;
+  role: "member" | "admin";
   projectIds: string[];
   joinedCommunityIds: string[];
 };
@@ -223,6 +230,7 @@ export const users: User[] = [
     country: "Uzbekistan",
     region: "Tashkent",
     major: "Mechatronics Engineering",
+    bio: "Mechatronics engineer building autonomous drones and ROVs. Always down to prototype something new.",
     avatarUrl: "",
     verified: true,
     builderScore: 920,
@@ -234,8 +242,12 @@ export const users: User[] = [
       { name: "Circuit Design", rating: 8 },
     ],
     interests: ["Drones", "Robotics", "IoT", "Aerospace"],
+    portfolio: [{ title: "AutoDrone build log", url: "https://github.com" }],
+    githubUrl: "https://github.com/akbart",
+    linkedinUrl: "https://linkedin.com/in/akbart",
     availability: "Looking for team members",
     profileCompleted: true,
+    role: "admin",
     projectIds: ["p1", "p3"],
     joinedCommunityIds: ["c7"],
   },
@@ -246,6 +258,7 @@ export const users: User[] = [
     country: "Uzbekistan",
     region: "Tashkent",
     major: "Computer Science",
+    bio: "Full-stack developer focused on health tech and EdTech for underserved communities.",
     avatarUrl: "",
     verified: true,
     builderScore: 855,
@@ -257,8 +270,12 @@ export const users: User[] = [
       { name: "PostgreSQL", rating: 6 },
     ],
     interests: ["EdTech", "Health Tech", "Open Source", "AI"],
+    portfolio: [{ title: "TashMed case study", url: "https://github.com" }],
+    githubUrl: "https://github.com/dilnozay",
+    linkedinUrl: "https://linkedin.com/in/dilnozay",
     availability: "Looking for projects",
     profileCompleted: true,
+    role: "member",
     projectIds: ["p4", "p6"],
     joinedCommunityIds: ["c6"],
   },
@@ -269,6 +286,7 @@ export const users: User[] = [
     country: "Uzbekistan",
     region: "Tashkent",
     major: "Electrical Engineering",
+    bio: "Electrical engineer obsessed with renewable energy and solar tracking systems.",
     avatarUrl: "",
     verified: false,
     builderScore: 680,
@@ -280,8 +298,12 @@ export const users: User[] = [
       { name: "Solar Systems", rating: 9 },
     ],
     interests: ["Renewable Energy", "IoT", "Smart Grids", "Electronics"],
+    portfolio: [],
+    githubUrl: "",
+    linkedinUrl: "",
     availability: "Looking for team members",
     profileCompleted: false,
+    role: "member",
     projectIds: ["p2"],
     joinedCommunityIds: [],
   },
@@ -292,6 +314,7 @@ export const users: User[] = [
     country: "Uzbekistan",
     region: "Tashkent",
     major: "Biomedical Engineering",
+    bio: "Biomedical engineer building affordable wearable health monitors.",
     avatarUrl: "",
     verified: false,
     builderScore: 590,
@@ -303,8 +326,12 @@ export const users: User[] = [
       { name: "Circuit Design", rating: 6 },
     ],
     interests: ["Health Tech", "Wearables", "Biomedical", "AI in Medicine"],
+    portfolio: [],
+    githubUrl: "",
+    linkedinUrl: "",
     availability: "Looking for internship",
     profileCompleted: false,
+    role: "member",
     projectIds: ["p8"],
     joinedCommunityIds: ["c8"],
   },
@@ -315,6 +342,7 @@ export const users: User[] = [
     country: "Uzbekistan",
     region: "Tashkent",
     major: "Aerospace Engineering",
+    bio: "Aerospace engineer working on UAVs, ROVs, and flight control systems.",
     avatarUrl: "",
     verified: true,
     builderScore: 780,
@@ -326,8 +354,12 @@ export const users: User[] = [
       { name: "C / C++", rating: 6 },
     ],
     interests: ["Drones", "Aerospace", "Fluid Dynamics", "Autonomous Systems"],
+    portfolio: [],
+    githubUrl: "https://github.com/jasura",
+    linkedinUrl: "",
     availability: "Looking for team members",
     profileCompleted: true,
+    role: "member",
     projectIds: ["p3", "p7"],
     joinedCommunityIds: ["c1", "c7"],
   },
@@ -338,6 +370,7 @@ export const users: User[] = [
     country: "Uzbekistan",
     region: "Samarkand",
     major: "Software Engineering",
+    bio: "Software engineer building IoT and ML tools for agriculture.",
     avatarUrl: "",
     verified: false,
     builderScore: 710,
@@ -349,8 +382,12 @@ export const users: User[] = [
       { name: "Data Analysis", rating: 8 },
     ],
     interests: ["AgTech", "Machine Learning", "IoT", "Sustainability"],
+    portfolio: [],
+    githubUrl: "",
+    linkedinUrl: "",
     availability: "Looking for projects",
     profileCompleted: false,
+    role: "member",
     projectIds: ["p5"],
     joinedCommunityIds: [],
   },
@@ -1031,6 +1068,35 @@ export const FIELD_TOOLS: Record<string, FieldTool[]> = {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 export const MOCK_CURRENT_USER_ID = "u1";
+
+let guestCounter = 0;
+
+/** Creates a brand-new, empty profile for a freshly "signed up" mock user. */
+export function createGuestUser(): User {
+  guestCounter += 1;
+  return {
+    id: `guest-${Date.now()}-${guestCounter}`,
+    name: "",
+    school: "",
+    country: "",
+    region: "",
+    major: "",
+    bio: "",
+    avatarUrl: "",
+    verified: false,
+    builderScore: 0,
+    skills: [],
+    interests: [],
+    portfolio: [],
+    githubUrl: "",
+    linkedinUrl: "",
+    availability: "Not available",
+    profileCompleted: false,
+    role: "member",
+    projectIds: [],
+    joinedCommunityIds: [],
+  };
+}
 
 export function getUserById(id: string) { return users.find((u) => u.id === id); }
 export function getProjectById(id: string) { return projects.find((p) => p.id === id); }

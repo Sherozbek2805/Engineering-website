@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, MapPin, GraduationCap, Trophy, Zap } from "lucide-react";
+import { ArrowLeft, MapPin, GraduationCap, Trophy, Zap, Github, Linkedin, FolderOpen } from "lucide-react";
 import { getUserById, getProjectsByIds } from "@/lib/mock-data";
 import VerifiedAvatar from "@/components/VerifiedAvatar";
 import ProjectCard from "@/components/ProjectCard";
@@ -73,6 +73,7 @@ export default function ProfilePage() {
           >
             <VerifiedAvatar
               name={user.name}
+              avatarUrl={user.avatarUrl}
               verified={user.verified}
               size="xl"
             />
@@ -94,6 +95,12 @@ export default function ProfilePage() {
                 </span>
               )}
             </div>
+
+            {user.bio && (
+              <p className="text-xs leading-relaxed" style={{ color: "#c4c4d4" }}>
+                {user.bio}
+              </p>
+            )}
 
             <div className="flex flex-col gap-1 w-full text-left">
               <div
@@ -145,6 +152,34 @@ export default function ProfilePage() {
               <span className={`w-1.5 h-1.5 rounded-full ${avail.dot}`} />
               {user.availability}
             </span>
+
+            {/* Social links */}
+            {(user.githubUrl || user.linkedinUrl) && (
+              <div className="flex items-center gap-2">
+                {user.githubUrl && (
+                  <a
+                    href={user.githubUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors hover:bg-[#1a1a28]"
+                    style={{ color: "#8b8b9e" }}
+                  >
+                    <Github size={15} />
+                  </a>
+                )}
+                {user.linkedinUrl && (
+                  <a
+                    href={user.linkedinUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors hover:bg-[#1a1a28]"
+                    style={{ color: "#8b8b9e" }}
+                  >
+                    <Linkedin size={15} />
+                  </a>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Interests */}
@@ -167,6 +202,32 @@ export default function ProfilePage() {
               ))}
             </div>
           </div>
+
+          {/* Portfolio */}
+          {user.portfolio.length > 0 && (
+            <div
+              className="rounded-2xl border p-5"
+              style={{ backgroundColor: "#111118", borderColor: "#1e1e2e" }}
+            >
+              <h2 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                <FolderOpen size={14} style={{ color: "#6633ee" }} /> Portfolio
+              </h2>
+              <div className="flex flex-col gap-2">
+                {user.portfolio.map((item) => (
+                  <a
+                    key={item.title}
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs hover:underline truncate"
+                    style={{ color: "#a78bfa" }}
+                  >
+                    {item.title}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right: skills + projects */}

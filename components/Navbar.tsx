@@ -135,7 +135,7 @@ export default function Navbar() {
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className="flex items-center gap-1.5 rounded-xl p-1 transition-colors hover:bg-[#1a1a28]"
               >
-                <VerifiedAvatar name={currentUser.name} verified={currentUser.verified} size="sm" />
+                <VerifiedAvatar name={currentUser.name} avatarUrl={currentUser.avatarUrl} verified={currentUser.verified} size="sm" />
                 <ChevronDown size={12} style={{ color: "#8b8b9e" }} />
               </button>
 
