@@ -10,7 +10,7 @@ interface ProfileGateProps {
 }
 
 export default function ProfileGate({ children, action = "this action" }: ProfileGateProps) {
-  const { isAuthenticated, profileCompleted, signIn } = useAuth();
+  const { isAuthenticated, profileCompleted } = useAuth();
 
   if (isAuthenticated && profileCompleted) return <>{children}</>;
 
@@ -38,8 +38,8 @@ export default function ProfileGate({ children, action = "this action" }: Profil
             Browsing is open to everyone — sign in to join the conversation.
           </p>
         </div>
-        <button
-          onClick={signIn}
+        <Link
+          href="/login"
           className="text-xs font-semibold flex-shrink-0 px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
           style={{
             background: "linear-gradient(135deg, #6633ee, #7744ff)",
@@ -47,7 +47,7 @@ export default function ProfileGate({ children, action = "this action" }: Profil
           }}
         >
           Sign in →
-        </button>
+        </Link>
       </div>
     );
   }

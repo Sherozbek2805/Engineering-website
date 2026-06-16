@@ -1,14 +1,16 @@
 "use client";
 
 import { createContext, useContext, useState, ReactNode } from "react";
-import { User, users, MOCK_CURRENT_USER_ID, createGuestUser } from "./mock-data";
+import { User, users, verifyCredentials, registerAccount } from "./mock-data";
 
 interface AuthContextType {
   currentUser: User | null;
   isAuthenticated: boolean;
   profileCompleted: boolean;
-  signIn: () => void;
-  signUp: () => void;
+  /** Mock/local login — returns the signed-in user, or null if the credentials don't match. */
+  login: (email: string, password: string) => User | null;
+  /** Mock/local signup — does NOT sign the user in; they're redirected to /login afterward. */
+  signup: (name: string, email: string, password: string) => { user: User } | { error: string };
   signOut: () => void;
   updateCurrentUser: (updates: Partial<User>) => void;
 }
@@ -17,8 +19,8 @@ const AuthContext = createContext<AuthContextType>({
   currentUser: null,
   isAuthenticated: false,
   profileCompleted: false,
-  signIn: () => {},
-  signUp: () => {},
+  login: () => null,
+  signup: () => ({ error: "Not ready" }),
   signOut: () => {},
   updateCurrentUser: () => {},
 });
@@ -26,16 +28,14 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  // "Log in" — mock returning-user flow, signs in as the seeded demo account.
-  function signIn() {
-    setCurrentUser(users.find((u) => u.id === MOCK_CURRENT_USER_ID) ?? null);
+  function login(email: string, password: string): User | null {
+    const user = verifyCredentials(email, password);
+    if (user) setCurrentUser(user);
+    return user;
   }
 
-  // "Sign up" — mock new-user flow, creates a fresh empty profile that needs onboarding.
-  function signUp() {
-    const guest = createGuestUser();
-    users.push(guest);
-    setCurrentUser(guest);
+  function signup(name: string, email: string, password: string) {
+    return registerAccount(name, email, password);
   }
 
   function signOut() {
@@ -58,8 +58,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         currentUser,
         isAuthenticated: currentUser !== null,
         profileCompleted: currentUser?.profileCompleted ?? false,
-        signIn,
-        signUp,
+        login,
+        signup,
         signOut,
         updateCurrentUser,
       }}

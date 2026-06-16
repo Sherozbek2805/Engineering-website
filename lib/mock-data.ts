@@ -7,6 +7,7 @@ export type PortfolioItem = { title: string; url: string };
 export type User = {
   id: string;
   name: string;
+  email: string;
   school: string;
   country: string;
   region: string;
@@ -27,8 +28,17 @@ export type User = {
     | "Not available";
   profileCompleted: boolean;
   role: "member" | "admin";
+  /** Account moderation state. New signups start "pending" until an admin approves them. */
+  status: "pending" | "approved" | "rejected";
   projectIds: string[];
   joinedCommunityIds: string[];
+};
+
+/** Mock credential store — NOT secure, for local/demo auth only. */
+export type Account = {
+  userId: string;
+  email: string;
+  password: string;
 };
 
 export type Discipline = {
@@ -121,10 +131,19 @@ export type Cohort = {
   title: string;
   goal: string;
   disciplineId: string;
+  ownerId: string;
   memberIds: string[];
   teamSize: number;
   rolesOpen: string[];
   description: string;
+};
+
+export type JoinRequest = {
+  id: string;
+  cohortId: string;
+  userId: string;
+  status: "requested" | "rejected";
+  createdAt: string;
 };
 
 export type FieldTool = {
@@ -226,6 +245,7 @@ export const users: User[] = [
   {
     id: "u1",
     name: "Akbar Tashkentov",
+    email: "akbar@buildnet.dev",
     school: "Tashkent State Technical University",
     country: "Uzbekistan",
     region: "Tashkent",
@@ -248,12 +268,14 @@ export const users: User[] = [
     availability: "Looking for team members",
     profileCompleted: true,
     role: "admin",
+    status: "approved",
     projectIds: ["p1", "p3"],
     joinedCommunityIds: ["c7"],
   },
   {
     id: "u2",
     name: "Dilnoza Yusupova",
+    email: "dilnoza@buildnet.dev",
     school: "Westminster International University",
     country: "Uzbekistan",
     region: "Tashkent",
@@ -276,12 +298,14 @@ export const users: User[] = [
     availability: "Looking for projects",
     profileCompleted: true,
     role: "member",
+    status: "approved",
     projectIds: ["p4", "p6"],
     joinedCommunityIds: ["c6"],
   },
   {
     id: "u3",
     name: "Bobur Karimov",
+    email: "bobur@buildnet.dev",
     school: "Tashkent University of Information Technologies",
     country: "Uzbekistan",
     region: "Tashkent",
@@ -304,12 +328,14 @@ export const users: User[] = [
     availability: "Looking for team members",
     profileCompleted: false,
     role: "member",
+    status: "approved",
     projectIds: ["p2"],
     joinedCommunityIds: [],
   },
   {
     id: "u4",
     name: "Zarina Nazarova",
+    email: "zarina@buildnet.dev",
     school: "National University of Uzbekistan",
     country: "Uzbekistan",
     region: "Tashkent",
@@ -332,12 +358,14 @@ export const users: User[] = [
     availability: "Looking for internship",
     profileCompleted: false,
     role: "member",
+    status: "approved",
     projectIds: ["p8"],
     joinedCommunityIds: ["c8"],
   },
   {
     id: "u5",
     name: "Jasur Abdullayev",
+    email: "jasur@buildnet.dev",
     school: "Tashkent Aviation Institute",
     country: "Uzbekistan",
     region: "Tashkent",
@@ -360,12 +388,14 @@ export const users: User[] = [
     availability: "Looking for team members",
     profileCompleted: true,
     role: "member",
+    status: "approved",
     projectIds: ["p3", "p7"],
     joinedCommunityIds: ["c1", "c7"],
   },
   {
     id: "u6",
     name: "Malika Mirzayeva",
+    email: "malika@buildnet.dev",
     school: "INHA University in Tashkent",
     country: "Uzbekistan",
     region: "Samarkand",
@@ -388,9 +418,22 @@ export const users: User[] = [
     availability: "Looking for projects",
     profileCompleted: false,
     role: "member",
+    status: "approved",
     projectIds: ["p5"],
     joinedCommunityIds: [],
   },
+];
+
+// ─── Mock credential store ────────────────────────────────────────────────────
+// Demo password for every seeded account below is "buildnet123".
+
+export const accounts: Account[] = [
+  { userId: "u1", email: "akbar@buildnet.dev", password: "buildnet123" },
+  { userId: "u2", email: "dilnoza@buildnet.dev", password: "buildnet123" },
+  { userId: "u3", email: "bobur@buildnet.dev", password: "buildnet123" },
+  { userId: "u4", email: "zarina@buildnet.dev", password: "buildnet123" },
+  { userId: "u5", email: "jasur@buildnet.dev", password: "buildnet123" },
+  { userId: "u6", email: "malika@buildnet.dev", password: "buildnet123" },
 ];
 
 // ─── Projects ─────────────────────────────────────────────────────────────────
@@ -943,6 +986,7 @@ export const cohorts: Cohort[] = [
     title: "Open-Source Robot Arm",
     goal: "Build a 6-DOF robot arm with sub-millimeter repeatability, fully open-source hardware + firmware, priced under $300.",
     disciplineId: "d7",
+    ownerId: "u1",
     memberIds: ["u1", "u5"],
     teamSize: 5,
     rolesOpen: ["Firmware Engineer", "Mechanical Engineer", "CAD Designer"],
@@ -953,6 +997,7 @@ export const cohorts: Cohort[] = [
     title: "CubeSat for Climate Monitoring",
     goal: "Design and simulate a 1U CubeSat to monitor Central Asian dust storms using hyperspectral imaging.",
     disciplineId: "d1",
+    ownerId: "u5",
     memberIds: ["u5"],
     teamSize: 5,
     rolesOpen: ["Electrical Engineer", "Software Developer", "Structural Engineer", "GNC Engineer"],
@@ -963,6 +1008,7 @@ export const cohorts: Cohort[] = [
     title: "Tashkent Air Quality IoT Network",
     goal: "Deploy 20 low-cost air quality sensors across Tashkent and publish real-time PM2.5 / NOx data publicly.",
     disciplineId: "d10",
+    ownerId: "u3",
     memberIds: ["u3", "u6"],
     teamSize: 4,
     rolesOpen: ["Hardware Engineer", "Backend Developer"],
@@ -973,12 +1019,17 @@ export const cohorts: Cohort[] = [
     title: "Adaptive STEM Learning Engine (Open Source)",
     goal: "Build the core adaptive algorithm and API that other EdTech apps can plug into — a shared open-source learning engine.",
     disciplineId: "d6",
+    ownerId: "u2",
     memberIds: ["u2"],
     teamSize: 4,
     rolesOpen: ["Backend Developer", "ML Engineer", "Frontend Developer"],
     description: "EduAI proved the concept in a closed app. Now we're abstracting the spaced-repetition + mastery engine into a standalone open API. Target: launch on Product Hunt and submit to OSSAR 2026.",
   },
 ];
+
+// ─── Cohort join requests ────────────────────────────────────────────────────
+
+export const joinRequests: JoinRequest[] = [];
 
 // ─── Field Tools ─────────────────────────────────────────────────────────────
 
@@ -1077,6 +1128,7 @@ export function createGuestUser(): User {
   return {
     id: `guest-${Date.now()}-${guestCounter}`,
     name: "",
+    email: "",
     school: "",
     country: "",
     region: "",
@@ -1093,9 +1145,51 @@ export function createGuestUser(): User {
     availability: "Not available",
     profileCompleted: false,
     role: "member",
+    status: "pending",
     projectIds: [],
     joinedCommunityIds: [],
   };
+}
+
+// ─── Auth (mock/local — not secure, demo only) ────────────────────────────────
+
+export function findUserByEmail(email: string) {
+  return users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
+}
+
+/** Looks up credentials and returns the matching user, or null if invalid. */
+export function verifyCredentials(email: string, password: string): User | null {
+  const account = accounts.find(
+    (a) => a.email.toLowerCase() === email.trim().toLowerCase() && a.password === password
+  );
+  if (!account) return null;
+  return getUserById(account.userId) ?? null;
+}
+
+/** Registers a brand-new account + user. Returns an error string on failure. */
+export function registerAccount(
+  name: string,
+  email: string,
+  password: string
+): { user: User } | { error: string } {
+  if (findUserByEmail(email)) {
+    return { error: "An account with this email already exists." };
+  }
+  const user = createGuestUser();
+  user.name = name.trim();
+  user.email = email.trim();
+  users.push(user);
+  accounts.push({ userId: user.id, email: user.email, password });
+  return { user };
+}
+
+export function getPendingUsers() {
+  return users.filter((u) => u.status === "pending");
+}
+
+export function setUserStatus(userId: string, status: User["status"]) {
+  const user = getUserById(userId);
+  if (user) user.status = status;
 }
 
 export function getUserById(id: string) { return users.find((u) => u.id === id); }
@@ -1113,3 +1207,47 @@ export function getCommunityByDiscipline(disciplineId: string) { return communit
 export function getCommunityMessages(communityId: string) { return communityMessages.filter((m) => m.communityId === communityId); }
 export function getCohortById(id: string) { return cohorts.find((c) => c.id === id); }
 export function getCohortsByDiscipline(disciplineId: string) { return cohorts.filter((c) => c.disciplineId === disciplineId); }
+
+// ─── Cohort join requests ─────────────────────────────────────────────────────
+
+export function getJoinRequestsByCohort(cohortId: string) {
+  return joinRequests.filter((r) => r.cohortId === cohortId);
+}
+export function getPendingRequests(cohortId: string) {
+  return joinRequests.filter((r) => r.cohortId === cohortId && r.status === "requested");
+}
+export function hasRequestedToJoin(cohortId: string, userId: string) {
+  return joinRequests.some((r) => r.cohortId === cohortId && r.userId === userId && r.status === "requested");
+}
+
+/** Creates a join request, unless the user already requested or is already a member. */
+export function requestToJoinCohort(cohortId: string, userId: string) {
+  const cohort = getCohortById(cohortId);
+  if (!cohort || cohort.memberIds.includes(userId)) return;
+  if (hasRequestedToJoin(cohortId, userId)) return;
+  joinRequests.push({
+    id: `jr-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    cohortId,
+    userId,
+    status: "requested",
+    createdAt: new Date().toISOString(),
+  });
+}
+
+/** Approves a request — folds the requester into the cohort's members and clears the request. */
+export function approveJoinRequest(requestId: string) {
+  const request = joinRequests.find((r) => r.id === requestId);
+  if (!request) return;
+  const cohort = getCohortById(request.cohortId);
+  if (cohort && !cohort.memberIds.includes(request.userId)) {
+    cohort.memberIds.push(request.userId);
+  }
+  const idx = joinRequests.indexOf(request);
+  if (idx !== -1) joinRequests.splice(idx, 1);
+}
+
+/** Rejects (removes) a pending request. */
+export function rejectJoinRequest(requestId: string) {
+  const idx = joinRequests.findIndex((r) => r.id === requestId);
+  if (idx !== -1) joinRequests.splice(idx, 1);
+}

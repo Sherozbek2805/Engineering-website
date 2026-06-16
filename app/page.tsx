@@ -40,7 +40,7 @@ const VALUE_PROPS = [
 
 export default function LandingPage() {
   const router = useRouter();
-  const { isAuthenticated, profileCompleted, signIn, signUp } = useAuth();
+  const { isAuthenticated, profileCompleted } = useAuth();
 
   // Routing: signed-in users never see the marketing hero.
   useEffect(() => {
@@ -50,16 +50,6 @@ export default function LandingPage() {
   }, [isAuthenticated, profileCompleted, router]);
 
   if (isAuthenticated) return null;
-
-  function handleSignUp() {
-    signUp();
-    router.push("/onboarding");
-  }
-
-  function handleLogIn() {
-    signIn();
-    router.push("/engineering");
-  }
 
   return (
     <div className="flex flex-col">
@@ -112,8 +102,8 @@ export default function LandingPage() {
 
         {/* CTA buttons */}
         <div className="flex flex-col sm:flex-row items-center gap-3 relative">
-          <button
-            onClick={handleSignUp}
+          <Link
+            href="/signup"
             className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
             style={{
               background: "linear-gradient(135deg, #6633ee, #7744ff)",
@@ -123,10 +113,10 @@ export default function LandingPage() {
             <UserPlus size={17} />
             Sign up
             <ArrowRight size={15} />
-          </button>
+          </Link>
 
-          <button
-            onClick={handleLogIn}
+          <Link
+            href="/login"
             className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-colors hover:text-white"
             style={{
               color: "#8b8b9e",
@@ -136,7 +126,7 @@ export default function LandingPage() {
           >
             <LogIn size={15} />
             Log in
-          </button>
+          </Link>
         </div>
 
         {/* Stats */}

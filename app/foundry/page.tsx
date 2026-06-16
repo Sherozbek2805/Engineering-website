@@ -1,23 +1,32 @@
 "use client";
 
 import { useState } from "react";
-import { Users, Plus, Lock } from "lucide-react";
+import Link from "next/link";
+import { Users, Plus, Lock, LogIn, CheckCircle2, Clock } from "lucide-react";
 import {
   cohorts,
-  disciplines,
   getUserById,
   getDisciplineById,
-  MOCK_CURRENT_USER_ID,
-  users,
+  hasRequestedToJoin,
+  requestToJoinCohort,
 } from "@/lib/mock-data";
 import VerifiedAvatar from "@/components/VerifiedAvatar";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 
 export default function FoundryPage() {
-  const { profileCompleted } = useAuth();
+  const { currentUser, isAuthenticated, profileCompleted } = useAuth();
   const [showForm, setShowForm] = useState(false);
-  const currentUser = users.find((u) => u.id === MOCK_CURRENT_USER_ID);
+  // Bump this after mutating the shared joinRequests array to force a re-render.
+  const [, setTick] = useState(0);
+
+  const canJoin = isAuthenticated && profileCompleted;
+
+  function handleRequestToJoin(cohortId: string) {
+    if (!currentUser || !canJoin) return;
+    requestToJoinCohort(cohortId, currentUser.id);
+    setTick((t) => t + 1);
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
@@ -33,18 +42,33 @@ export default function FoundryPage() {
           onClick={() => setShowForm(!showForm)}
           className={cn(
             "flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold flex-shrink-0 transition-opacity",
-            profileCompleted ? "text-white hover:opacity-90" : "opacity-50 cursor-not-allowed text-white"
+            canJoin ? "text-white hover:opacity-90" : "opacity-50 cursor-not-allowed text-white"
           )}
           style={{ background: "linear-gradient(135deg, #6633ee, #7744ff)" }}
-          title={!profileCompleted ? "Complete your profile first" : undefined}
+          title={!canJoin ? "Complete your profile first" : undefined}
+          disabled={!canJoin}
         >
           <Plus size={15} />
           Start a cohort
         </button>
       </div>
 
-      {/* Profile gate banner */}
-      {!profileCompleted && (
+      {/* Gate banner */}
+      {!isAuthenticated && (
+        <div
+          className="flex items-center gap-3 px-4 py-3 rounded-xl mb-6 text-sm"
+          style={{ backgroundColor: "#1a1a28", border: "1px solid #2e2e44" }}
+        >
+          <LogIn size={14} style={{ color: "#a78bfa" }} />
+          <span style={{ color: "#8b8b9e" }}>
+            Sign in to start a cohort or request to join one.
+          </span>
+          <Link href="/login" className="ml-auto text-xs font-semibold flex-shrink-0" style={{ color: "#a78bfa" }}>
+            Sign in →
+          </Link>
+        </div>
+      )}
+      {isAuthenticated && !profileCompleted && (
         <div
           className="flex items-center gap-3 px-4 py-3 rounded-xl mb-6 text-sm"
           style={{ backgroundColor: "#1a1a28", border: "1px solid #2e2e44" }}
@@ -53,9 +77,9 @@ export default function FoundryPage() {
           <span style={{ color: "#8b8b9e" }}>
             Complete your profile to start a cohort or request to join one.
           </span>
-          <a href={`/profile/${MOCK_CURRENT_USER_ID}`} className="ml-auto text-xs font-semibold flex-shrink-0" style={{ color: "#a78bfa" }}>
+          <Link href="/onboarding" className="ml-auto text-xs font-semibold flex-shrink-0" style={{ color: "#a78bfa" }}>
             Complete →
-          </a>
+          </Link>
         </div>
       )}
 
@@ -65,7 +89,8 @@ export default function FoundryPage() {
           const disc = getDisciplineById(cohort.disciplineId);
           const members = cohort.memberIds.map(getUserById).filter(Boolean);
           const spotsLeft = cohort.teamSize - cohort.memberIds.length;
-          const isMember = cohort.memberIds.includes(MOCK_CURRENT_USER_ID);
+          const isMember = !!currentUser && cohort.memberIds.includes(currentUser.id);
+          const requested = !!currentUser && hasRequestedToJoin(cohort.id, currentUser.id);
 
           return (
             <div
@@ -85,7 +110,9 @@ export default function FoundryPage() {
 
               {/* Title + goal */}
               <div>
-                <h3 className="text-sm font-bold text-white mb-1.5">{cohort.title}</h3>
+                <Link href={`/foundry/${cohort.id}`} className="text-sm font-bold text-white mb-1.5 block hover:underline">
+                  {cohort.title}
+                </Link>
                 <p className="text-xs leading-relaxed" style={{ color: "#c4c4d4" }}>
                   {cohort.goal}
                 </p>
@@ -104,7 +131,7 @@ export default function FoundryPage() {
                 </div>
                 <div className="flex -space-x-1.5">
                   {members.map((m) =>
-                    m ? <VerifiedAvatar key={m.id} name={m.name} verified={m.verified} size="sm" /> : null
+                    m ? <VerifiedAvatar key={m.id} name={m.name} avatarUrl={m.avatarUrl} verified={m.verified} size="sm" /> : null
                   )}
                   {Array.from({ length: Math.max(0, spotsLeft) }).map((_, i) => (
                     <div
@@ -135,16 +162,21 @@ export default function FoundryPage() {
 
               {/* CTA */}
               <button
+                onClick={() => handleRequestToJoin(cohort.id)}
                 className={cn(
-                  "mt-auto w-full py-2 rounded-xl text-xs font-semibold transition-opacity",
-                  isMember ? "text-white opacity-50 cursor-not-allowed" :
-                  profileCompleted ? "text-white hover:opacity-90" :
-                  "text-white opacity-40 cursor-not-allowed"
+                  "mt-auto w-full py-2 rounded-xl text-xs font-semibold transition-opacity flex items-center justify-center gap-1.5",
+                  isMember || requested || !canJoin ? "text-white opacity-50 cursor-not-allowed" : "text-white hover:opacity-90"
                 )}
                 style={{ background: "linear-gradient(135deg, #6633ee, #7744ff)" }}
-                disabled={!profileCompleted || isMember}
+                disabled={!canJoin || isMember || requested}
               >
-                {isMember ? "You're a member" : "Request to join"}
+                {isMember ? (
+                  <><CheckCircle2 size={13} /> You&apos;re a member</>
+                ) : requested ? (
+                  <><Clock size={13} /> Requested</>
+                ) : (
+                  "Request to join"
+                )}
               </button>
             </div>
           );

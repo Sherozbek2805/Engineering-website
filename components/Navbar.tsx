@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Cpu, Search, User, ChevronDown, LogIn } from "lucide-react";
+import { Cpu, Search, User, ChevronDown, LogIn, ShieldCheck } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -12,7 +12,7 @@ import VerifiedAvatar from "./VerifiedAvatar";
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { currentUser, isAuthenticated, signIn, signOut } = useAuth();
+  const { currentUser, isAuthenticated, signOut } = useAuth();
   const [search, setSearch] = useState("");
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -160,6 +160,16 @@ export default function Navbar() {
                     <Cpu size={14} style={{ color: "#8b8b9e" }} />
                     Post project
                   </Link>
+                  {currentUser.role === "admin" && (
+                    <Link
+                      href="/admin"
+                      onClick={() => setShowUserMenu(false)}
+                      className="flex items-center gap-2 px-3 py-2 text-sm text-white hover:bg-[#1a1a28] transition-colors"
+                    >
+                      <ShieldCheck size={14} style={{ color: "#a78bfa" }} />
+                      Admin
+                    </Link>
+                  )}
                   <div className="my-1" style={{ borderTop: "1px solid #1e1e2e" }} />
                   <button
                     onClick={() => { signOut(); setShowUserMenu(false); }}
@@ -172,14 +182,14 @@ export default function Navbar() {
               )}
             </div>
           ) : (
-            <button
-              onClick={signIn}
+            <Link
+              href="/login"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90"
               style={{ background: "linear-gradient(135deg, #6633ee, #7744ff)" }}
             >
               <LogIn size={13} />
               Sign in
-            </button>
+            </Link>
           )}
         </div>
       </div>
