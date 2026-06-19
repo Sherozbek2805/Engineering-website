@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft, Users, Lock, LogIn, CheckCircle2, Clock, Check, X,
+  ArrowLeft, Users, ShieldAlert, LogIn, CheckCircle2, Clock, Check, X,
 } from "lucide-react";
 import {
   getCohortById,
@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 export default function CohortDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { currentUser, isAuthenticated, profileCompleted } = useAuth();
+  const { currentUser, isAuthenticated } = useAuth();
   const [, setTick] = useState(0);
 
   const cohort = getCohortById(params.id as string);
@@ -42,7 +42,7 @@ export default function CohortDetailPage() {
   const disc = getDisciplineById(cohort.disciplineId);
   const members = cohort.memberIds.map(getUserById).filter(Boolean);
   const spotsLeft = cohort.teamSize - cohort.memberIds.length;
-  const canJoin = isAuthenticated && profileCompleted;
+  const canJoin = isAuthenticated && (currentUser?.verified ?? false);
   const isMember = !!currentUser && cohort.memberIds.includes(currentUser.id);
   const requested = !!currentUser && hasRequestedToJoin(cohort.id, currentUser.id);
   const isOwner = !!currentUser && currentUser.id === cohort.ownerId;
@@ -116,15 +116,15 @@ export default function CohortDetailPage() {
           </Link>
         </div>
       )}
-      {isAuthenticated && !profileCompleted && (
+      {isAuthenticated && !currentUser?.verified && (
         <div
           className="flex items-center gap-3 px-4 py-3 rounded-xl mb-6 text-sm"
-          style={{ backgroundColor: "#1a1a28", border: "1px solid #2e2e44" }}
+          style={{ backgroundColor: "#1a1208", border: "1px solid #5c3b12" }}
         >
-          <Lock size={14} style={{ color: "#a78bfa" }} />
-          <span style={{ color: "#8b8b9e" }}>Complete your profile to request to join this cohort.</span>
-          <Link href="/onboarding" className="ml-auto text-xs font-semibold flex-shrink-0" style={{ color: "#a78bfa" }}>
-            Complete →
+          <ShieldAlert size={14} style={{ color: "#fb923c" }} />
+          <span style={{ color: "#8b8b9e" }}>Verify your account to join this cohort. Connect GitHub or LinkedIn from your profile.</span>
+          <Link href={`/profile/${currentUser?.id}`} className="ml-auto text-xs font-semibold flex-shrink-0" style={{ color: "#fb923c" }}>
+            Verify →
           </Link>
         </div>
       )}

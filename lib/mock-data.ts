@@ -27,9 +27,8 @@ export type User = {
     | "Looking for internship"
     | "Not available";
   profileCompleted: boolean;
-  role: "member" | "admin";
-  /** Account moderation state. New signups start "pending" until an admin approves them. */
-  status: "pending" | "approved" | "rejected";
+  role: "builder" | "admin";
+  verificationProvider?: "github" | "linkedin";
   projectIds: string[];
   joinedCommunityIds: string[];
 };
@@ -111,17 +110,32 @@ export type Opportunity = {
   link: string;
 };
 
+export type Channel = {
+  id: string;
+  name: string;
+};
+
 export type Community = {
   id: string;
   name: string;
   disciplineId: string;
+  channels: Channel[];
   memberIds: string[];
 };
 
-export type CommunityMessage = {
+export type ChannelMessage = {
   id: string;
   communityId: string;
+  channelId: string;
   authorId: string;
+  body: string;
+  createdAt: string;
+};
+
+export type DirectMessage = {
+  id: string;
+  fromId: string;
+  toId: string;
   body: string;
   createdAt: string;
 };
@@ -268,7 +282,6 @@ export const users: User[] = [
     availability: "Looking for team members",
     profileCompleted: true,
     role: "admin",
-    status: "approved",
     projectIds: ["p1", "p3"],
     joinedCommunityIds: ["c7"],
   },
@@ -297,8 +310,7 @@ export const users: User[] = [
     linkedinUrl: "https://linkedin.com/in/dilnozay",
     availability: "Looking for projects",
     profileCompleted: true,
-    role: "member",
-    status: "approved",
+    role: "builder",
     projectIds: ["p4", "p6"],
     joinedCommunityIds: ["c6"],
   },
@@ -327,8 +339,7 @@ export const users: User[] = [
     linkedinUrl: "",
     availability: "Looking for team members",
     profileCompleted: false,
-    role: "member",
-    status: "approved",
+    role: "builder",
     projectIds: ["p2"],
     joinedCommunityIds: [],
   },
@@ -357,8 +368,7 @@ export const users: User[] = [
     linkedinUrl: "",
     availability: "Looking for internship",
     profileCompleted: false,
-    role: "member",
-    status: "approved",
+    role: "builder",
     projectIds: ["p8"],
     joinedCommunityIds: ["c8"],
   },
@@ -387,8 +397,7 @@ export const users: User[] = [
     linkedinUrl: "",
     availability: "Looking for team members",
     profileCompleted: true,
-    role: "member",
-    status: "approved",
+    role: "builder",
     projectIds: ["p3", "p7"],
     joinedCommunityIds: ["c1", "c7"],
   },
@@ -417,8 +426,7 @@ export const users: User[] = [
     linkedinUrl: "",
     availability: "Looking for projects",
     profileCompleted: false,
-    role: "member",
-    status: "approved",
+    role: "builder",
     projectIds: ["p5"],
     joinedCommunityIds: [],
   },
@@ -961,21 +969,39 @@ export const opportunities: Opportunity[] = [
 
 // ─── Communities ──────────────────────────────────────────────────────────────
 
-export const communities: Community[] = [
-  { id: "c1", name: "Aerospace Community", disciplineId: "d1", memberIds: ["u5"] },
-  { id: "c6", name: "Software / CS Community", disciplineId: "d6", memberIds: ["u2", "u6"] },
-  { id: "c7", name: "Robotics Community", disciplineId: "d7", memberIds: ["u1", "u5"] },
-  { id: "c8", name: "Biomedical Community", disciplineId: "d8", memberIds: ["u4"] },
+const STANDARD_CHANNELS: Channel[] = [
+  { id: "general", name: "general" },
+  { id: "help", name: "help" },
+  { id: "showcase", name: "showcase" },
+  { id: "resources", name: "resources" },
 ];
 
-export const communityMessages: CommunityMessage[] = [
-  { id: "cm1", communityId: "c7", authorId: "u1", body: "Hey everyone — sharing the PX4 firmware fork I've been using for AutoDrone. Happy to answer questions.", createdAt: "2026-06-10T09:00:00Z" },
-  { id: "cm2", communityId: "c7", authorId: "u5", body: "Thanks Akbar! I've been looking for exactly this for the AquaBot thruster controller. Does it support variable RPM via CAN?", createdAt: "2026-06-10T09:15:00Z" },
-  { id: "cm3", communityId: "c7", authorId: "u1", body: "Yes — full UAVCAN v1 support. Tested up to 4 ESCs. Ping me if you run into issues.", createdAt: "2026-06-10T09:30:00Z" },
-  { id: "cm4", communityId: "c6", authorId: "u2", body: "Just shipped the WebRTC adaptive bitrate fix for TashMed. Finally stable on 3G. Will write a post about it.", createdAt: "2026-06-11T10:00:00Z" },
-  { id: "cm5", communityId: "c6", authorId: "u6", body: "Please do — I need this for SmartFarm's monitoring feed. Is the fix reusable?", createdAt: "2026-06-11T10:20:00Z" },
-  { id: "cm6", communityId: "c1", authorId: "u5", body: "Anyone interested in the CubeSat cohort? Looking for an EE and a SW dev to start. Posting in Foundry soon.", createdAt: "2026-06-12T08:00:00Z" },
-  { id: "cm7", communityId: "c8", authorId: "u4", body: "Validated MAX30105 SpO2 accuracy today — within 1% of clinical oximeter across 10 test subjects. Very happy!", createdAt: "2026-06-13T14:00:00Z" },
+export const communities: Community[] = [
+  { id: "c1", name: "Aerospace Community", disciplineId: "d1", channels: STANDARD_CHANNELS, memberIds: ["u5"] },
+  { id: "c6", name: "Software / CS Community", disciplineId: "d6", channels: STANDARD_CHANNELS, memberIds: ["u2", "u6"] },
+  { id: "c7", name: "Robotics Community", disciplineId: "d7", channels: STANDARD_CHANNELS, memberIds: ["u1", "u5"] },
+  { id: "c8", name: "Biomedical Community", disciplineId: "d8", channels: STANDARD_CHANNELS, memberIds: ["u4"] },
+];
+
+export const channelMessages: ChannelMessage[] = [
+  { id: "cm1", communityId: "c7", channelId: "general", authorId: "u1", body: "Hey everyone — sharing the PX4 firmware fork I've been using for AutoDrone. Happy to answer questions.", createdAt: "2026-06-10T09:00:00Z" },
+  { id: "cm2", communityId: "c7", channelId: "general", authorId: "u5", body: "Thanks Akbar! I've been looking for exactly this for the AquaBot thruster controller. Does it support variable RPM via CAN?", createdAt: "2026-06-10T09:15:00Z" },
+  { id: "cm3", communityId: "c7", channelId: "general", authorId: "u1", body: "Yes — full UAVCAN v1 support. Tested up to 4 ESCs. Ping me if you run into issues.", createdAt: "2026-06-10T09:30:00Z" },
+  { id: "cm4", communityId: "c6", channelId: "general", authorId: "u2", body: "Just shipped the WebRTC adaptive bitrate fix for TashMed. Finally stable on 3G. Will write a post about it.", createdAt: "2026-06-11T10:00:00Z" },
+  { id: "cm5", communityId: "c6", channelId: "general", authorId: "u6", body: "Please do — I need this for SmartFarm's monitoring feed. Is the fix reusable?", createdAt: "2026-06-11T10:20:00Z" },
+  { id: "cm6", communityId: "c1", channelId: "general", authorId: "u5", body: "Anyone interested in the CubeSat cohort? Looking for an EE and a SW dev to start. Posting in Foundry soon.", createdAt: "2026-06-12T08:00:00Z" },
+  { id: "cm7", communityId: "c8", channelId: "general", authorId: "u4", body: "Validated MAX30105 SpO2 accuracy today — within 1% of clinical oximeter across 10 test subjects. Very happy!", createdAt: "2026-06-13T14:00:00Z" },
+  { id: "cm8", communityId: "c7", channelId: "showcase", authorId: "u5", body: "AquaBot just hit 3m dive depth reliably. Seal fix worked perfectly. Video coming soon!", createdAt: "2026-06-14T11:00:00Z" },
+  { id: "cm9", communityId: "c6", channelId: "help", authorId: "u6", body: "Anyone have experience with MQTT broker setup on a low-RAM VPS? SmartFarm's broker keeps OOM-killing.", createdAt: "2026-06-15T08:30:00Z" },
+  { id: "cm10", communityId: "c6", channelId: "help", authorId: "u2", body: "Switch to EMQX — it's way more memory-efficient than Mosquitto at scale. We use it for TashMed.", createdAt: "2026-06-15T09:00:00Z" },
+  { id: "cm11", communityId: "c7", channelId: "resources", authorId: "u1", body: "Dropping the Webots scene file for the robot arm simulation. DM me if you want the ROS2 bridge config.", createdAt: "2026-06-16T10:00:00Z" },
+];
+
+export const directMessages: DirectMessage[] = [
+  { id: "dm1", fromId: "u1", toId: "u5", body: "Hey Jasur — are you free to pair on the AquaBot thruster firmware this week?", createdAt: "2026-06-14T12:00:00Z" },
+  { id: "dm2", fromId: "u5", toId: "u1", body: "Yes! Thursday afternoon works. I'll share my current CAN bus config beforehand.", createdAt: "2026-06-14T12:30:00Z" },
+  { id: "dm3", fromId: "u2", toId: "u6", body: "Hey Malika — can you share the MQTT fix you mentioned? TashMed has the same issue.", createdAt: "2026-06-15T10:00:00Z" },
+  { id: "dm4", fromId: "u6", toId: "u2", body: "Sure! It's just a config change in mosquitto.conf. I'll send a gist.", createdAt: "2026-06-15T10:15:00Z" },
 ];
 
 // ─── Cohorts (Foundry) ────────────────────────────────────────────────────────
@@ -1122,6 +1148,18 @@ export const MOCK_CURRENT_USER_ID = "u1";
 
 let guestCounter = 0;
 
+/** Finds an existing user by email or creates a new auto-approved one for Google OAuth sign-in. */
+export function loginOrCreateGoogleUser(email: string, name: string, avatarUrl: string): User {
+  const existing = findUserByEmail(email);
+  if (existing) return existing;
+  const user = createGuestUser();
+  user.name = name || email.split("@")[0];
+  user.email = email;
+  user.avatarUrl = avatarUrl;
+  users.push(user);
+  return user;
+}
+
 /** Creates a brand-new, empty profile for a freshly "signed up" mock user. */
 export function createGuestUser(): User {
   guestCounter += 1;
@@ -1144,8 +1182,7 @@ export function createGuestUser(): User {
     linkedinUrl: "",
     availability: "Not available",
     profileCompleted: false,
-    role: "member",
-    status: "pending",
+    role: "builder",
     projectIds: [],
     joinedCommunityIds: [],
   };
@@ -1183,13 +1220,13 @@ export function registerAccount(
   return { user };
 }
 
-export function getPendingUsers() {
-  return users.filter((u) => u.status === "pending");
-}
-
-export function setUserStatus(userId: string, status: User["status"]) {
+/** Mock: connect a user to GitHub or LinkedIn to set them as verified. */
+export function connectVerification(userId: string, provider: "github" | "linkedin") {
   const user = getUserById(userId);
-  if (user) user.status = status;
+  if (user) {
+    user.verified = true;
+    user.verificationProvider = provider;
+  }
 }
 
 export function getUserById(id: string) { return users.find((u) => u.id === id); }
@@ -1204,7 +1241,39 @@ export function getResourcesByDiscipline(disciplineId: string) { return resource
 export function getOpportunitiesByDiscipline(disciplineId: string) { return opportunities.filter((o) => o.disciplineId === disciplineId || o.disciplineId === null); }
 export function getCommunityById(id: string) { return communities.find((c) => c.id === id); }
 export function getCommunityByDiscipline(disciplineId: string) { return communities.find((c) => c.disciplineId === disciplineId); }
-export function getCommunityMessages(communityId: string) { return communityMessages.filter((m) => m.communityId === communityId); }
+export function getChannelMessages(communityId: string, channelId: string) {
+  return channelMessages.filter((m) => m.communityId === communityId && m.channelId === channelId);
+}
+export function addChannelMessage(communityId: string, channelId: string, authorId: string, body: string) {
+  channelMessages.push({
+    id: `cm-${Date.now()}`,
+    communityId,
+    channelId,
+    authorId,
+    body,
+    createdAt: new Date().toISOString(),
+  });
+}
+export function getDirectMessages(userA: string, userB: string) {
+  return directMessages.filter(
+    (m) => (m.fromId === userA && m.toId === userB) || (m.fromId === userB && m.toId === userA)
+  ).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+export function getDMConversations(userId: string) {
+  const seen = new Set<string>();
+  const convos: string[] = [];
+  directMessages
+    .filter((m) => m.fromId === userId || m.toId === userId)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .forEach((m) => {
+      const other = m.fromId === userId ? m.toId : m.fromId;
+      if (!seen.has(other)) { seen.add(other); convos.push(other); }
+    });
+  return convos;
+}
+export function addDirectMessage(fromId: string, toId: string, body: string) {
+  directMessages.push({ id: `dm-${Date.now()}`, fromId, toId, body, createdAt: new Date().toISOString() });
+}
 export function getCohortById(id: string) { return cohorts.find((c) => c.id === id); }
 export function getCohortsByDiscipline(disciplineId: string) { return cohorts.filter((c) => c.disciplineId === disciplineId); }
 

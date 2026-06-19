@@ -42,3 +42,14 @@ body {
   background: var(--border);
   border-radius: 3px;
 }
+
+/* Primary button glow on hover */
+.btn-primary {
+  background: linear-gradient(135deg, #6633ee, #7744ff);
+  color: #fff;
+  transition: opacity 0.15s, box-shadow 0.2s;
+}
+.btn-primary:hover {
+  opacity: 0.92;
+  box-shadow: 0 0 18px rgba(102, 51, 238, 0.55), 0 0 6px rgba(119, 68, 255, 0.35);
+}

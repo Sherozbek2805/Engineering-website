@@ -3,8 +3,21 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Cpu, UserPlus, AlertCircle } from "lucide-react";
+import { Cpu, UserPlus, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+
+function getStrength(pwd: string): { score: number; label: string; color: string; hint: string } {
+  if (!pwd) return { score: 0, label: "", color: "", hint: "" };
+  let score = 0;
+  if (pwd.length >= 8) score++;
+  if (pwd.length >= 12) score++;
+  if (/[A-Z]/.test(pwd)) score++;
+  if (/[0-9]/.test(pwd)) score++;
+  if (/[^A-Za-z0-9]/.test(pwd)) score++;
+  if (score <= 1) return { score, label: "Weak", color: "#f87171", hint: "Add uppercase letters, numbers, or symbols" };
+  if (score <= 3) return { score, label: "Fair", color: "#fb923c", hint: "Try making it longer or adding symbols" };
+  return { score, label: "Strong", color: "#34d399", hint: "Great password!" };
+}
 
 export default function SignupPage() {
   const router = useRouter();
@@ -14,7 +27,11 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState("");
+
+  const strength = getStrength(password);
 
   const inputStyle = {
     backgroundColor: "#0a0a0f",
@@ -22,7 +39,7 @@ export default function SignupPage() {
     color: "#ffffff",
     borderRadius: "12px",
   };
-  const labelStyle = { color: "#8b8b9e", fontSize: "13px", fontWeight: 500 };
+  const labelStyle = { color: "#8b8b9e", fontSize: "13px", fontWeight: 500 as const };
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -100,32 +117,88 @@ export default function SignupPage() {
             />
           </div>
 
+          {/* Password with toggle + strength meter */}
           <div className="flex flex-col gap-1.5">
             <label style={labelStyle}>Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 6 characters"
-              className="px-4 py-2.5 text-sm outline-none w-full"
-              style={inputStyle}
-              onFocus={(e) => (e.target.style.borderColor = "#6633ee")}
-              onBlur={(e) => (e.target.style.borderColor = "#1e1e2e")}
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="At least 6 characters"
+                className="px-4 py-2.5 pr-10 text-sm outline-none w-full"
+                style={inputStyle}
+                onFocus={(e) => (e.target.style.borderColor = "#6633ee")}
+                onBlur={(e) => (e.target.style.borderColor = "#1e1e2e")}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2"
+                style={{ color: "#5a5a6e" }}
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+
+            {/* Strength indicator */}
+            {password && (
+              <div className="flex flex-col gap-1.5 mt-0.5">
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div
+                      key={i}
+                      className="h-1 flex-1 rounded-full transition-all duration-200"
+                      style={{
+                        backgroundColor: i <= strength.score ? strength.color : "#1e1e2e",
+                      }}
+                    />
+                  ))}
+                </div>
+                <p className="text-xs flex items-center gap-1.5">
+                  <span style={{ color: strength.color }} className="font-medium">
+                    {strength.label}
+                  </span>
+                  <span style={{ color: "#5a5a6e" }}>— {strength.hint}</span>
+                </p>
+              </div>
+            )}
           </div>
 
+          {/* Confirm password with toggle */}
           <div className="flex flex-col gap-1.5">
             <label style={labelStyle}>Confirm password</label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Re-enter your password"
-              className="px-4 py-2.5 text-sm outline-none w-full"
-              style={inputStyle}
-              onFocus={(e) => (e.target.style.borderColor = "#6633ee")}
-              onBlur={(e) => (e.target.style.borderColor = "#1e1e2e")}
-            />
+            <div className="relative">
+              <input
+                type={showConfirm ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter your password"
+                className="px-4 py-2.5 pr-10 text-sm outline-none w-full"
+                style={inputStyle}
+                onFocus={(e) => (e.target.style.borderColor = "#6633ee")}
+                onBlur={(e) => (e.target.style.borderColor = "#1e1e2e")}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirm((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2"
+                style={{ color: "#5a5a6e" }}
+                tabIndex={-1}
+              >
+                {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+            {/* Match indicator */}
+            {confirmPassword && (
+              <p
+                className="text-xs mt-0.5"
+                style={{ color: confirmPassword === password ? "#34d399" : "#f87171" }}
+              >
+                {confirmPassword === password ? "Passwords match" : "Passwords don't match yet"}
+              </p>
+            )}
           </div>
 
           <button

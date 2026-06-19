@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Providers from "@/components/Providers";
+import BackgroundGradient from "@/components/ui/background-gradient";
 
 export const metadata: Metadata = {
   title: "BuildNet — What are you building right now?",
@@ -13,6 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <Providers>
+          <BackgroundGradient />
           <Navbar />
           <main>{children}</main>
         </Providers>

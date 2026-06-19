@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ShieldCheck, Check, X, Inbox } from "lucide-react";
-import { getPendingUsers, setUserStatus } from "@/lib/mock-data";
+import { ShieldCheck, ShieldAlert, Users } from "lucide-react";
+import { users } from "@/lib/mock-data";
 import { useAuth } from "@/lib/auth-context";
 import VerifiedAvatar from "@/components/VerifiedAvatar";
 
@@ -13,25 +13,16 @@ export default function AdminPage() {
   const { currentUser, isAuthenticated } = useAuth();
   const isAdmin = isAuthenticated && currentUser?.role === "admin";
 
-  const [pending, setPending] = useState(() => getPendingUsers());
-
-  // Redirect anyone who isn't an admin away from this page.
   useEffect(() => {
     if (isAuthenticated && !isAdmin) router.replace("/engineering");
     if (!isAuthenticated) router.replace("/");
   }, [isAuthenticated, isAdmin, router]);
 
-  function handleApprove(userId: string) {
-    setUserStatus(userId, "approved");
-    setPending(getPendingUsers());
-  }
-
-  function handleReject(userId: string) {
-    setUserStatus(userId, "rejected");
-    setPending(getPendingUsers());
-  }
-
   if (!isAdmin) return null;
+
+  const builders = users.filter((u) => u.id !== currentUser?.id);
+  const verified = builders.filter((u) => u.verified).length;
+  const unverified = builders.filter((u) => !u.verified).length;
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
@@ -40,48 +31,52 @@ export default function AdminPage() {
         <h1 className="text-2xl font-bold text-white">Admin</h1>
       </div>
       <p className="text-sm mb-8" style={{ color: "#8b8b9e" }}>
-        Review and moderate new signups before they're fully approved.
+        BuildNet network management.
       </p>
 
-      <div className="rounded-2xl border p-5" style={{ backgroundColor: "#111118", borderColor: "#1e1e2e" }}>
-        <h2 className="text-sm font-semibold text-white mb-4">
-          Pending signups {pending.length > 0 && `(${pending.length})`}
-        </h2>
+      {/* Stats row */}
+      <div className="grid grid-cols-3 gap-3 mb-8">
+        {[
+          { label: "Total builders", value: builders.length, color: "#a78bfa" },
+          { label: "Verified", value: verified, color: "#34d399" },
+          { label: "Unverified", value: unverified, color: "#fb923c" },
+        ].map((s) => (
+          <div key={s.label} className="rounded-2xl border p-4 text-center" style={{ backgroundColor: "#111118", borderColor: "#1e1e2e" }}>
+            <p className="text-2xl font-bold" style={{ color: s.color }}>{s.value}</p>
+            <p className="text-xs mt-0.5" style={{ color: "#8b8b9e" }}>{s.label}</p>
+          </div>
+        ))}
+      </div>
 
-        {pending.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-10 text-center">
-            <Inbox size={24} style={{ color: "#5a5a6e" }} />
-            <p className="text-sm" style={{ color: "#8b8b9e" }}>No pending signups right now.</p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {pending.map((user) => (
-              <div key={user.id} className="flex items-center gap-3">
-                <VerifiedAvatar name={user.name || "?"} avatarUrl={user.avatarUrl} verified={user.verified} size="sm" />
-                <div className="flex-1 min-w-0">
-                  <Link href={`/profile/${user.id}`} className="text-sm font-medium text-white hover:underline">
-                    {user.name || "(no name yet)"}
-                  </Link>
-                  <p className="text-xs truncate" style={{ color: "#8b8b9e" }}>{user.email}</p>
-                </div>
-                <button
-                  onClick={() => handleApprove(user.id)}
-                  className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg transition-opacity hover:opacity-90"
-                  style={{ backgroundColor: "#0f2e22", color: "#34d399", border: "1px solid #1d4d38" }}
-                >
-                  <Check size={13} /> Approve
-                </button>
-                <button
-                  onClick={() => handleReject(user.id)}
-                  className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg transition-opacity hover:opacity-90"
-                  style={{ backgroundColor: "#3f1d1d", color: "#f87171", border: "1px solid #5c2424" }}
-                >
-                  <X size={13} /> Reject
-                </button>
+      {/* Builder list */}
+      <div className="rounded-2xl border p-5" style={{ backgroundColor: "#111118", borderColor: "#1e1e2e" }}>
+        <h2 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+          <Users size={15} style={{ color: "#6633ee" }} /> All builders
+        </h2>
+        <div className="flex flex-col gap-3">
+          {builders.map((u) => (
+            <div key={u.id} className="flex items-center gap-3">
+              <VerifiedAvatar name={u.name || "?"} avatarUrl={u.avatarUrl} verified={u.verified} size="sm" />
+              <div className="flex-1 min-w-0">
+                <Link href={`/profile/${u.id}`} className="text-sm font-medium text-white hover:underline">
+                  {u.name || "(no name)"}
+                </Link>
+                <p className="text-xs truncate" style={{ color: "#8b8b9e" }}>{u.email}</p>
               </div>
-            ))}
-          </div>
-        )}
+              {u.verified ? (
+                <span className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full"
+                  style={{ backgroundColor: "#0f2e22", color: "#34d399", border: "1px solid #1d4d38" }}>
+                  <ShieldCheck size={11} /> Verified
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full"
+                  style={{ backgroundColor: "#2a1f0a", color: "#fb923c", border: "1px solid #5c3b12" }}>
+                  <ShieldAlert size={11} /> Unverified
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

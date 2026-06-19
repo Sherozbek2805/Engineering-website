@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Users, Plus, Lock, LogIn, CheckCircle2, Clock } from "lucide-react";
+import { Users, Plus, ShieldAlert, LogIn, CheckCircle2, Clock } from "lucide-react";
 import {
   cohorts,
   getUserById,
@@ -15,12 +15,11 @@ import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 
 export default function FoundryPage() {
-  const { currentUser, isAuthenticated, profileCompleted } = useAuth();
+  const { currentUser, isAuthenticated } = useAuth();
   const [showForm, setShowForm] = useState(false);
-  // Bump this after mutating the shared joinRequests array to force a re-render.
   const [, setTick] = useState(0);
 
-  const canJoin = isAuthenticated && profileCompleted;
+  const canJoin = isAuthenticated && (currentUser?.verified ?? false);
 
   function handleRequestToJoin(cohortId: string) {
     if (!currentUser || !canJoin) return;
@@ -68,17 +67,17 @@ export default function FoundryPage() {
           </Link>
         </div>
       )}
-      {isAuthenticated && !profileCompleted && (
+      {isAuthenticated && !currentUser?.verified && (
         <div
           className="flex items-center gap-3 px-4 py-3 rounded-xl mb-6 text-sm"
-          style={{ backgroundColor: "#1a1a28", border: "1px solid #2e2e44" }}
+          style={{ backgroundColor: "#1a1208", border: "1px solid #5c3b12" }}
         >
-          <Lock size={14} style={{ color: "#a78bfa" }} />
+          <ShieldAlert size={14} style={{ color: "#fb923c" }} />
           <span style={{ color: "#8b8b9e" }}>
-            Complete your profile to start a cohort or request to join one.
+            Verify your account to start or join a cohort. Connect GitHub or LinkedIn from your profile.
           </span>
-          <Link href="/onboarding" className="ml-auto text-xs font-semibold flex-shrink-0" style={{ color: "#a78bfa" }}>
-            Complete →
+          <Link href={`/profile/${currentUser?.id}`} className="ml-auto text-xs font-semibold flex-shrink-0" style={{ color: "#fb923c" }}>
+            Verify →
           </Link>
         </div>
       )}

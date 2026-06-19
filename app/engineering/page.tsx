@@ -14,16 +14,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
 
 export default function EngineeringPage() {
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
-      {/* Header */}
-      <div className="mb-10 text-center">
-        <h1 className="text-3xl font-bold text-white mb-3">Engineering</h1>
-        <p className="text-base max-w-lg mx-auto" style={{ color: "#8b8b9e" }}>
-          Choose your discipline. Explore projects, tools, Q&amp;A, and research
-          from the community building in that field.
-        </p>
-      </div>
-
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
       {/* Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {disciplines.map((disc) => {
