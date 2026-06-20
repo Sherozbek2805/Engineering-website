@@ -108,12 +108,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signup(name: string, email: string, password: string): Promise<{ error?: string }> {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { full_name: name, name } },
     });
     if (error) return { error: error.message };
+    // Supabase returns no error but empty identities when the email already exists
+    if (data.user && (data.user.identities?.length ?? 0) === 0) {
+      return { error: "An account with this email already exists. Please log in instead." };
+    }
     return {};
   }
 
