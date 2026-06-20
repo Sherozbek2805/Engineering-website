@@ -113,7 +113,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
       options: { data: { full_name: name, name } },
     });
-    if (error) return { error: error.message };
+    if (error) {
+      if (error.message.toLowerCase().includes("rate limit")) {
+        return { error: "Too many signup attempts. Please wait a few minutes and try again." };
+      }
+      return { error: error.message };
+    }
     // Supabase returns no error but empty identities when the email already exists
     if (data.user && (data.user.identities?.length ?? 0) === 0) {
       return { error: "An account with this email already exists. Please log in instead." };
