@@ -4,13 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Hash, ShieldAlert, Send, LogIn } from "lucide-react";
-import {
-  getCommunityById,
-  getUserById,
-  getDisciplineById,
-  getChannelMessages,
-  addChannelMessage,
-} from "@/lib/mock-data";
+import { getCommunityById, getDisciplineById } from "@/lib/mock-data";
+import { getChannelMessages, sendChannelMessage, type DbChannelMessage } from "@/lib/db";
 import { useAuth } from "@/lib/auth-context";
 import VerifiedAvatar from "@/components/VerifiedAvatar";
 
@@ -29,20 +24,28 @@ export default function CommunityPage() {
   const community = getCommunityById(communityId);
   const disc = community ? getDisciplineById(community.disciplineId) : null;
   const [activeChannel, setActiveChannel] = useState(community?.channels[0]?.id ?? "general");
+  const [messages, setMessages] = useState<DbChannelMessage[]>([]);
   const [input, setInput] = useState("");
-  const [, setTick] = useState(0);
+  const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const canMessage = isAuthenticated && (currentUser?.verified ?? false);
-  const messages = community ? getChannelMessages(communityId, activeChannel) : [];
+
+  async function loadMessages(channel: string) {
+    if (!community) return;
+    const data = await getChannelMessages(communityId, channel);
+    setMessages(data);
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "auto" }), 50);
+  }
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "auto" });
-  }, [messages.length, activeChannel]);
+    loadMessages(activeChannel);
+  }, [communityId, activeChannel]);
 
   useEffect(() => {
-    if (community?.channels[0]) setActiveChannel(community.channels[0].id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (community?.channels[0]) {
+      setActiveChannel(community.channels[0].id);
+    }
   }, [communityId]);
 
   if (!community) {
@@ -53,13 +56,14 @@ export default function CommunityPage() {
     );
   }
 
-  function handleSend(e: React.FormEvent) {
+  async function handleSend(e: React.FormEvent) {
     e.preventDefault();
-    if (!input.trim() || !currentUser || !canMessage) return;
-    addChannelMessage(communityId, activeChannel, currentUser.id, input.trim());
+    if (!input.trim() || !currentUser || !canMessage || sending) return;
+    setSending(true);
+    await sendChannelMessage(communityId, activeChannel, currentUser.id, input.trim());
     setInput("");
-    setTick((t) => t + 1);
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+    setSending(false);
+    await loadMessages(activeChannel);
   }
 
   const channelName = community.channels.find((c) => c.id === activeChannel)?.name ?? activeChannel;
@@ -71,11 +75,7 @@ export default function CommunityPage() {
         className="flex-shrink-0 flex flex-col"
         style={{ width: 240, backgroundColor: "#0f0f18", borderRight: "1px solid #1e1e2e" }}
       >
-        {/* Community name header */}
-        <div
-          className="px-4 py-3 flex items-center gap-2 flex-shrink-0 cursor-default"
-          style={{ borderBottom: "1px solid #1e1e2e" }}
-        >
+        <div className="px-4 py-3 flex items-center gap-2 flex-shrink-0 cursor-default" style={{ borderBottom: "1px solid #1e1e2e" }}>
           {disc && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: disc.color }} />}
           <h2 className="text-sm font-bold text-white truncate">{community.name.replace(" Community", "")}</h2>
         </div>
@@ -89,10 +89,7 @@ export default function CommunityPage() {
                 key={ch.id}
                 onClick={() => setActiveChannel(ch.id)}
                 className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition-colors text-left"
-                style={{
-                  backgroundColor: isActive ? "#6633ee22" : "transparent",
-                  color: isActive ? "#e2e2f0" : "#8b8b9e",
-                }}
+                style={{ backgroundColor: isActive ? "#6633ee22" : "transparent", color: isActive ? "#e2e2f0" : "#8b8b9e" }}
               >
                 <Hash size={14} style={{ color: isActive ? "#a78bfa" : "#5a5a6e", flexShrink: 0 }} />
                 {ch.name}
@@ -100,35 +97,18 @@ export default function CommunityPage() {
             );
           })}
 
-          <p className="text-xs font-semibold px-2 mt-4 mb-1" style={{ color: "#5a5a6e" }}>
-            MEMBERS — {community.memberIds.length}
-          </p>
-          {community.memberIds.map((uid) => {
-            const u = getUserById(uid);
-            if (!u) return null;
-            return (
-              <Link
-                key={uid}
-                href={`/profile/${uid}`}
-                className="flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors hover:bg-[#1a1a28]"
-              >
-                <VerifiedAvatar name={u.name} avatarUrl={u.avatarUrl} verified={u.verified} size="sm" />
-                <span className="text-xs text-white truncate">{u.name.split(" ")[0]}</span>
-              </Link>
-            );
-          })}
+          <p className="text-xs font-semibold px-2 mt-4 mb-1" style={{ color: "#5a5a6e" }}>MEMBERS</p>
+          <p className="text-xs px-2" style={{ color: "#5a5a6e" }}>Members shown after joining.</p>
         </div>
       </div>
 
       {/* Chat area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
         <div className="px-5 py-3 flex items-center gap-2 flex-shrink-0" style={{ borderBottom: "1px solid #1e1e2e" }}>
           <Hash size={16} style={{ color: "#5a5a6e" }} />
           <span className="text-sm font-semibold text-white">{channelName}</span>
         </div>
 
-        {/* Messages */}
         <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-0.5">
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center gap-2 h-full py-16 text-center">
@@ -138,12 +118,12 @@ export default function CommunityPage() {
             </div>
           )}
           {messages.map((msg, i) => {
-            const author = getUserById(msg.authorId);
+            const author = msg.author;
             if (!author) return null;
             const prev = messages[i - 1];
             const grouped =
-              prev?.authorId === msg.authorId &&
-              new Date(msg.createdAt).getTime() - new Date(prev.createdAt).getTime() < 5 * 60 * 1000;
+              prev?.author_id === msg.author_id &&
+              new Date(msg.created_at).getTime() - new Date(prev.created_at).getTime() < 5 * 60 * 1000;
 
             if (grouped) {
               return (
@@ -155,14 +135,14 @@ export default function CommunityPage() {
 
             return (
               <div key={msg.id} className="flex gap-3 mt-3 pr-2 py-1 rounded hover:bg-[#0f0f18] -mx-2 px-2 group">
-                <VerifiedAvatar name={author.name} avatarUrl={author.avatarUrl} verified={author.verified} size="sm" />
+                <VerifiedAvatar name={author.name} avatarUrl={author.avatar_url} verified={author.verified} size="sm" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2 mb-0.5">
                     <Link href={`/profile/${author.id}`} className="text-sm font-semibold text-white hover:underline">
                       {author.name}
                     </Link>
                     <span className="text-xs" style={{ color: "#5a5a6e" }}>
-                      {formatDate(msg.createdAt)} at {formatTime(msg.createdAt)}
+                      {formatDate(msg.created_at)} at {formatTime(msg.created_at)}
                     </span>
                   </div>
                   <p className="text-sm leading-relaxed" style={{ color: "#c4c4d4" }}>{msg.body}</p>
@@ -173,22 +153,15 @@ export default function CommunityPage() {
           <div ref={bottomRef} />
         </div>
 
-        {/* Input / gate */}
         <div className="flex-shrink-0 px-4 pb-4 pt-2">
           {!isAuthenticated ? (
-            <div
-              className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm"
-              style={{ backgroundColor: "#1a1a28", border: "1px solid #2e2e44" }}
-            >
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm" style={{ backgroundColor: "#1a1a28", border: "1px solid #2e2e44" }}>
               <LogIn size={14} style={{ color: "#a78bfa" }} />
               <span style={{ color: "#8b8b9e" }}>Sign in to message this community.</span>
               <Link href="/login" className="ml-auto text-xs font-semibold" style={{ color: "#a78bfa" }}>Sign in →</Link>
             </div>
           ) : !currentUser?.verified ? (
-            <div
-              className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm"
-              style={{ backgroundColor: "#1a1208", border: "1px solid #5c3b12" }}
-            >
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm" style={{ backgroundColor: "#1a1208", border: "1px solid #5c3b12" }}>
               <ShieldAlert size={14} style={{ color: "#fb923c" }} />
               <span style={{ color: "#8b8b9e" }}>Verify your account to send messages.</span>
               <Link href={`/profile/${currentUser?.id}`} className="ml-auto text-xs font-semibold" style={{ color: "#fb923c" }}>Verify →</Link>
@@ -207,7 +180,7 @@ export default function CommunityPage() {
               />
               <button
                 type="submit"
-                disabled={!input.trim()}
+                disabled={!input.trim() || sending}
                 className="w-10 h-10 flex items-center justify-center rounded-xl transition-opacity disabled:opacity-40 hover:opacity-90"
                 style={{ background: "linear-gradient(135deg, #6633ee, #7744ff)" }}
               >

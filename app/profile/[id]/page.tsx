@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, MapPin, GraduationCap, Trophy, Zap, Github, Linkedin, FolderOpen, ShieldAlert, ShieldCheck } from "lucide-react";
-import { getUserById, getProjectsByIds } from "@/lib/mock-data";
+import { getUserById } from "@/lib/mock-data";
 import { supabase } from "@/lib/supabase";
+import { getProjectsByOwnerId, type DbProject } from "@/lib/db";
 import { useAuth } from "@/lib/auth-context";
 import VerifiedAvatar from "@/components/VerifiedAvatar";
 import ProjectCard from "@/components/ProjectCard";
@@ -50,23 +51,28 @@ export default function ProfilePage() {
   const { currentUser, verify } = useAuth();
   const profileId = params.id as string;
 
-  // Try mock-data first (for seeded demo users u1-u6)
   const mockUser = getUserById(profileId);
   const [dbUser, setDbUser] = useState<User | null>(null);
+  const [userProjects, setUserProjects] = useState<DbProject[]>([]);
   const [loading, setLoading] = useState(!mockUser);
 
   useEffect(() => {
-    if (mockUser) return; // Already found in mock data
+    if (mockUser) return;
     supabase
       .from("profiles")
       .select("*")
       .eq("id", profileId)
       .single()
-      .then(({ data }) => {
-        if (data) setDbUser(rowToUser(data as Record<string, unknown>));
+      .then(async ({ data }) => {
+        if (data) {
+          const u = rowToUser(data as Record<string, unknown>);
+          setDbUser(u);
+          const projs = await getProjectsByOwnerId(profileId);
+          setUserProjects(projs);
+        }
         setLoading(false);
       });
-  }, [profileId, mockUser]);
+  }, [profileId]);
 
   const user = mockUser ?? dbUser;
 
@@ -89,7 +95,6 @@ export default function ProfilePage() {
     );
   }
 
-  const userProjects = getProjectsByIds(user.projectIds);
   const avail = AVAILABILITY_STYLES[user.availability] ?? AVAILABILITY_STYLES["Not available"];
   const isOwnProfile = currentUser?.id === user.id;
 

@@ -7,7 +7,7 @@ import {
   ArrowRight, LogIn, UserPlus, Cpu, Code2, Users, Zap,
   Plane, Settings2, Building2, FlaskConical, Bot, Heart, Layers, Leaf,
 } from "lucide-react";
-import { disciplines, projects, users } from "@/lib/mock-data";
+import { disciplines } from "@/lib/mock-data";
 import { useAuth } from "@/lib/auth-context";
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -132,9 +132,9 @@ export default function LandingPage() {
         {/* Stats */}
         <div className="flex items-center gap-8 mt-16 relative">
           {[
-            { icon: Zap, label: "active projects", value: projects.length },
-            { icon: Users, label: "builders", value: users.length },
             { icon: Cpu, label: "disciplines", value: disciplines.length },
+            { icon: Users, label: "community", value: "1000+" },
+            { icon: Zap, label: "projects & counting", value: "∞" },
           ].map(({ icon: Icon, label, value }) => (
             <div key={label} className="text-center">
               <div className="flex items-center justify-center gap-1.5 mb-0.5">

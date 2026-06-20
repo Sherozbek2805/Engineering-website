@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ChevronUp, Cpu, Code2 } from "lucide-react";
-import { Project, getUserById } from "@/lib/mock-data";
+import type { DbProject } from "@/lib/db";
 import VerifiedAvatar from "./VerifiedAvatar";
 import { cn } from "@/lib/utils";
 
@@ -14,15 +14,13 @@ const STAGE_STYLES: Record<string, { bg: string; text: string }> = {
   Final: { bg: "bg-emerald-500/15", text: "text-emerald-400" },
 };
 
-interface ProjectCardProps {
-  project: Project;
-}
-
-export default function ProjectCard({ project }: ProjectCardProps) {
-  const [upvotes, setUpvotes] = useState(project.upvotes);
+export default function ProjectCard({ project }: { project: DbProject }) {
+  const [upvotes, setUpvotes] = useState(project.upvotes ?? 0);
   const [upvoted, setUpvoted] = useState(false);
-  const owner = getUserById(project.ownerId);
+  const owner = project.owner;
   const stage = STAGE_STYLES[project.stage] ?? STAGE_STYLES.Idea;
+  const lookingFor = project.looking_for ?? [];
+  const tags = project.tags ?? [];
 
   function handleUpvote(e: React.MouseEvent) {
     e.preventDefault();
@@ -61,7 +59,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
           </h3>
           {owner && (
             <div className="flex items-center gap-1.5 mt-2">
-              <VerifiedAvatar name={owner.name} verified={owner.verified} size="sm" />
+              <VerifiedAvatar name={owner.name} avatarUrl={owner.avatar_url} verified={owner.verified} size="sm" />
               <span className="text-xs" style={{ color: "#8b8b9e" }}>{owner.name}</span>
             </div>
           )}
@@ -82,9 +80,9 @@ export default function ProjectCard({ project }: ProjectCardProps) {
         </div>
 
         {/* Tags */}
-        {project.tags.length > 0 && (
+        {tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
-            {project.tags.slice(0, 3).map((tag) => (
+            {tags.slice(0, 3).map((tag) => (
               <span key={tag} className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: "#1a1a28", color: "#8b8b9e" }}>
                 #{tag}
               </span>
@@ -95,7 +93,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
         {/* Footer */}
         <div className="flex items-end justify-between gap-2 mt-auto pt-1">
           <div className="flex flex-wrap gap-1">
-            {project.lookingFor.slice(0, 2).map((role) => (
+            {lookingFor.slice(0, 2).map((role) => (
               <span
                 key={role}
                 className="text-xs px-2 py-0.5 rounded-full font-medium"
@@ -104,9 +102,9 @@ export default function ProjectCard({ project }: ProjectCardProps) {
                 {role}
               </span>
             ))}
-            {project.lookingFor.length > 2 && (
+            {lookingFor.length > 2 && (
               <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: "#1a1a28", color: "#8b8b9e" }}>
-                +{project.lookingFor.length - 2}
+                +{lookingFor.length - 2}
               </span>
             )}
           </div>

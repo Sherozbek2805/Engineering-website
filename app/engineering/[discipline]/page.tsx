@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   Plane, Settings2, Zap, Building2, FlaskConical,
@@ -10,14 +10,13 @@ import {
   CheckCircle2, Globe, Calendar,
 } from "lucide-react";
 import {
-  getDisciplineBySlug, getProjectsByDiscipline, getQAPostsByDiscipline,
-  getQACommentsByPost, getResourcesByDiscipline, getOpportunitiesByDiscipline,
-  getCommunityByDiscipline, getUserById, FIELD_TOOLS,
+  getDisciplineBySlug, getResourcesByDiscipline,
+  getOpportunitiesByDiscipline, getCommunityByDiscipline, FIELD_TOOLS,
 } from "@/lib/mock-data";
+import { getProjectsByDisciplineId, type DbProject } from "@/lib/db";
 import ProjectCard from "@/components/ProjectCard";
 import ThreadedComments from "@/components/ThreadedComments";
 import ProfileGate from "@/components/ProfileGate";
-import VerifiedAvatar from "@/components/VerifiedAvatar";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 
@@ -46,11 +45,22 @@ export default function DisciplinePage() {
 
   const [tab, setTab] = useState<Tab>("projects");
   const [projFilter, setProjFilter] = useState<ProjectFilter>("all");
+  const [projects, setProjects] = useState<DbProject[]>([]);
+  const [projLoading, setProjLoading] = useState(true);
   const [expandedQA, setExpandedQA] = useState<string | null>(null);
   const [qaVotes, setQaVotes] = useState<Record<string, number>>({});
   const [qaVoteState, setQaVoteState] = useState<Record<string, "up" | "down" | null>>({});
   const [resourceVotes, setResourceVotes] = useState<Record<string, number>>({});
   const [showAskForm, setShowAskForm] = useState(false);
+
+  useEffect(() => {
+    if (!disc) return;
+    setProjLoading(true);
+    getProjectsByDisciplineId(disc.id).then((data) => {
+      setProjects(data);
+      setProjLoading(false);
+    });
+  }, [disc?.id]);
 
   if (!disc) {
     return (
@@ -64,13 +74,12 @@ export default function DisciplinePage() {
   }
 
   const Icon = ICON_MAP[disc.icon] ?? Code2;
-  const allProjects = getProjectsByDiscipline(disc.id);
   const filteredProjects =
-    projFilter === "all" ? allProjects :
-    projFilter === "finished" ? allProjects.filter((p) => p.finished) :
-    allProjects.filter((p) => p.kind === projFilter && !p.finished);
+    projFilter === "all" ? projects :
+    projFilter === "finished" ? projects.filter((p) => p.finished) :
+    projects.filter((p) => p.kind === projFilter && !p.finished);
 
-  const qaPosts = getQAPostsByDiscipline(disc.id);
+  const qaPosts: never[] = [];
   const resources = getResourcesByDiscipline(disc.id);
   const opps = getOpportunitiesByDiscipline(disc.id);
   const tools = FIELD_TOOLS[slug] ?? [];
@@ -117,8 +126,7 @@ export default function DisciplinePage() {
             <h1 className="text-xl font-bold text-white mb-1">{disc.name}</h1>
             <p className="text-sm mb-3" style={{ color: "#8b8b9e" }}>{disc.description}</p>
             <div className="flex flex-wrap gap-4 text-xs" style={{ color: "#8b8b9e" }}>
-              <span><span className="text-white font-semibold">{allProjects.length}</span> projects</span>
-              <span><span className="text-white font-semibold">{qaPosts.length}</span> Q&A threads</span>
+              <span><span className="text-white font-semibold">{projects.length}</span> projects</span>
               <span><span className="text-white font-semibold">{resources.length}</span> resources</span>
               {community && (
                 <a
@@ -126,7 +134,7 @@ export default function DisciplinePage() {
                   className="font-medium transition-colors hover:text-white"
                   style={{ color: disc.color }}
                 >
-                  → Join community ({community.memberIds.length} members)
+                  → Join community
                 </a>
               )}
             </div>
@@ -172,7 +180,11 @@ export default function DisciplinePage() {
             ))}
           </div>
 
-          {filteredProjects.length > 0 ? (
+          {projLoading ? (
+            <div className="text-center py-16">
+              <p className="text-sm" style={{ color: "#8b8b9e" }}>Loading projects…</p>
+            </div>
+          ) : filteredProjects.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredProjects.map((p) => <ProjectCard key={p.id} project={p} />)}
             </div>
@@ -285,7 +297,6 @@ export default function DisciplinePage() {
       {/* ── Q&A ── */}
       {tab === "qa" && (
         <div className="flex flex-col gap-4">
-          {/* Ask button */}
           <div>
             {!showAskForm ? (
               <button
@@ -329,96 +340,9 @@ export default function DisciplinePage() {
             )}
           </div>
 
-          {/* Question list */}
           {qaPosts.length === 0 ? (
             <p className="text-center py-16 text-sm" style={{ color: "#8b8b9e" }}>No questions yet. Be the first to ask!</p>
-          ) : (
-            qaPosts.map((post) => {
-              const author = getUserById(post.authorId);
-              const comments = getQACommentsByPost(post.id);
-              const isExpanded = expandedQA === post.id;
-              const curVote = qaVoteState[post.id] ?? null;
-              const curScore = qaVotes[post.id] ?? post.votes;
-
-              function handleQAVote(dir: "up" | "down") {
-                const delta = dir === "up" ? 1 : -1;
-                const prev = qaVoteState[post.id] ?? null;
-                if (prev === dir) {
-                  setQaVoteState((s) => ({ ...s, [post.id]: null }));
-                  setQaVotes((v) => ({ ...v, [post.id]: post.votes }));
-                } else {
-                  setQaVoteState((s) => ({ ...s, [post.id]: dir }));
-                  setQaVotes((v) => ({ ...v, [post.id]: post.votes + delta }));
-                }
-              }
-
-              return (
-                <div key={post.id} className="rounded-2xl border overflow-hidden" style={{ backgroundColor: "#111118", borderColor: "#1e1e2e" }}>
-                  {/* Post header */}
-                  <div className="p-5">
-                    <div className="flex gap-4">
-                      {/* Vote */}
-                      <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
-                        <button
-                          onClick={() => handleQAVote("up")}
-                          className="p-1 rounded transition-colors hover:text-white"
-                          style={{ color: curVote === "up" ? "#a78bfa" : "#8b8b9e" }}
-                        >
-                          <ChevronUp size={18} />
-                        </button>
-                        <span className="text-sm font-bold" style={{ color: curScore > 0 ? "#a78bfa" : "#8b8b9e" }}>{curScore}</span>
-                        <button
-                          onClick={() => handleQAVote("down")}
-                          className="p-1 rounded transition-colors hover:text-white"
-                          style={{ color: curVote === "down" ? "#f87171" : "#8b8b9e" }}
-                        >
-                          <ChevronDown size={18} />
-                        </button>
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          {post.peerReviewed && (
-                            <span className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400">
-                              <CheckCircle2 size={11} /> Peer reviewed
-                            </span>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => setExpandedQA(isExpanded ? null : post.id)}
-                          className="text-left"
-                        >
-                          <h3 className="text-sm font-semibold text-white mb-2 hover:text-[#a78bfa] transition-colors">
-                            {post.title}
-                          </h3>
-                        </button>
-                        {author && (
-                          <div className="flex items-center gap-2">
-                            <VerifiedAvatar name={author.name} verified={author.verified} size="sm" />
-                            <span className="text-xs" style={{ color: "#8b8b9e" }}>
-                              {author.name} · {new Date(post.createdAt).toLocaleDateString("en-US", { day: "numeric", month: "short" })}
-                            </span>
-                            <span className="text-xs" style={{ color: "#8b8b9e" }}>
-                              · {comments.length} comment{comments.length !== 1 ? "s" : ""}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Expanded thread */}
-                  {isExpanded && (
-                    <div className="px-5 pb-5 pt-0" style={{ borderTop: "1px solid #1e1e2e" }}>
-                      <p className="text-sm leading-relaxed mb-5 pt-4" style={{ color: "#c4c4d4" }}>{post.body}</p>
-                      <ThreadedComments comments={comments} postId={post.id} />
-                    </div>
-                  )}
-                </div>
-              );
-            })
-          )}
+          ) : null}
         </div>
       )}
 
@@ -430,7 +354,6 @@ export default function DisciplinePage() {
             <p className="text-center py-16 text-sm" style={{ color: "#8b8b9e" }}>No resources yet. Add the first one.</p>
           ) : (
             resources.map((res) => {
-              const addedBy = getUserById(res.addedById);
               const curVotes = resourceVotes[res.id] ?? res.votes;
               return (
                 <div
@@ -438,7 +361,6 @@ export default function DisciplinePage() {
                   className="rounded-2xl border p-4 flex items-center gap-4"
                   style={{ backgroundColor: "#111118", borderColor: "#1e1e2e" }}
                 >
-                  {/* Vote */}
                   <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
                     <button
                       onClick={() => setResourceVotes((v) => ({ ...v, [res.id]: curVotes + 1 }))}
@@ -449,16 +371,10 @@ export default function DisciplinePage() {
                     </button>
                     <span className="text-xs font-bold" style={{ color: "#a78bfa" }}>{curVotes}</span>
                   </div>
-
-                  {/* Content */}
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-semibold text-white mb-0.5">{res.title}</h3>
-                    <p className="text-xs leading-relaxed mb-1" style={{ color: "#8b8b9e" }}>{res.description}</p>
-                    {addedBy && (
-                      <span className="text-xs" style={{ color: "#8b8b9e" }}>Added by {addedBy.name}</span>
-                    )}
+                    <p className="text-xs leading-relaxed" style={{ color: "#8b8b9e" }}>{res.description}</p>
                   </div>
-
                   <a
                     href={res.url}
                     target="_blank"

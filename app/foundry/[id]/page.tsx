@@ -1,21 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft, Users, ShieldAlert, LogIn, CheckCircle2, Clock, Check, X,
 } from "lucide-react";
+import { getDisciplineById } from "@/lib/mock-data";
 import {
-  getCohortById,
-  getUserById,
-  getDisciplineById,
-  hasRequestedToJoin,
-  requestToJoinCohort,
-  getPendingRequests,
-  approveJoinRequest,
-  rejectJoinRequest,
-} from "@/lib/mock-data";
+  getCohortById, requestToJoin, updateMemberStatus, getUserCohortStatus,
+  type DbCohort, type DbMember,
+} from "@/lib/db";
 import VerifiedAvatar from "@/components/VerifiedAvatar";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
@@ -24,45 +19,67 @@ export default function CohortDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { currentUser, isAuthenticated } = useAuth();
-  const [, setTick] = useState(0);
 
-  const cohort = getCohortById(params.id as string);
+  const [cohort, setCohort] = useState<DbCohort | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [myStatus, setMyStatus] = useState<"requested" | "member" | "rejected" | null>(null);
+
+  async function load() {
+    const data = await getCohortById(params.id as string);
+    setCohort(data);
+    setLoading(false);
+    if (data && currentUser) {
+      const status = await getUserCohortStatus(data.id, currentUser.id);
+      setMyStatus(status);
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, [params.id, currentUser?.id]);
+
+  if (loading) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-24 text-center">
+        <p className="text-sm" style={{ color: "#8b8b9e" }}>Loading cohort…</p>
+      </div>
+    );
+  }
 
   if (!cohort) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-24 text-center">
         <p className="text-white font-medium mb-2">Cohort not found</p>
-        <button onClick={() => router.push("/foundry")} className="text-sm" style={{ color: "#6633ee" }}>
-          Back to Foundry
-        </button>
+        <button onClick={() => router.push("/foundry")} className="text-sm" style={{ color: "#6633ee" }}>Back to Foundry</button>
       </div>
     );
   }
 
-  const disc = getDisciplineById(cohort.disciplineId);
-  const members = cohort.memberIds.map(getUserById).filter(Boolean);
-  const spotsLeft = cohort.teamSize - cohort.memberIds.length;
+  const disc = getDisciplineById(cohort.discipline_id);
+  const allMembers: DbMember[] = cohort.members ?? [];
+  const acceptedMembers = allMembers.filter((m) => m.status === "member");
+  const pendingRequests = allMembers.filter((m) => m.status === "requested");
+  const spotsLeft = cohort.team_size - acceptedMembers.length;
   const canJoin = isAuthenticated && (currentUser?.verified ?? false);
-  const isMember = !!currentUser && cohort.memberIds.includes(currentUser.id);
-  const requested = !!currentUser && hasRequestedToJoin(cohort.id, currentUser.id);
-  const isOwner = !!currentUser && currentUser.id === cohort.ownerId;
-  const owner = getUserById(cohort.ownerId);
-  const pendingRequests = isOwner ? getPendingRequests(cohort.id) : [];
+  const isMember = myStatus === "member";
+  const requested = myStatus === "requested";
+  const isOwner = !!currentUser && currentUser.id === cohort.owner_id;
+  const owner = cohort.owner;
 
-  function handleRequestToJoin() {
+  async function handleRequestToJoin() {
     if (!currentUser || !canJoin) return;
-    requestToJoinCohort(cohort!.id, currentUser.id);
-    setTick((t) => t + 1);
+    const error = await requestToJoin(cohort!.id, currentUser.id);
+    if (!error) setMyStatus("requested");
   }
 
-  function handleApprove(requestId: string) {
-    approveJoinRequest(requestId);
-    setTick((t) => t + 1);
+  async function handleApprove(memberId: string) {
+    await updateMemberStatus(memberId, "member");
+    await load();
   }
 
-  function handleReject(requestId: string) {
-    rejectJoinRequest(requestId);
-    setTick((t) => t + 1);
+  async function handleReject(memberId: string) {
+    await updateMemberStatus(memberId, "rejected");
+    await load();
   }
 
   return (
@@ -88,11 +105,13 @@ export default function CohortDetailPage() {
 
         <h1 className="text-xl font-bold text-white mb-2 leading-snug">{cohort.title}</h1>
         <p className="text-sm leading-relaxed mb-4" style={{ color: "#a78bfa" }}>{cohort.goal}</p>
-        <p className="text-sm leading-relaxed" style={{ color: "#c4c4d4" }}>{cohort.description}</p>
+        {cohort.description && (
+          <p className="text-sm leading-relaxed" style={{ color: "#c4c4d4" }}>{cohort.description}</p>
+        )}
 
         {owner && (
           <div className="flex items-center gap-2 mt-4 pt-4" style={{ borderTop: "1px solid #1e1e2e" }}>
-            <VerifiedAvatar name={owner.name} avatarUrl={owner.avatarUrl} verified={owner.verified} size="sm" />
+            <VerifiedAvatar name={owner.name} avatarUrl={owner.avatar_url} verified={owner.verified} size="sm" />
             <span className="text-xs" style={{ color: "#8b8b9e" }}>
               Started by{" "}
               <Link href={`/profile/${owner.id}`} className="text-white hover:underline">
@@ -103,29 +122,19 @@ export default function CohortDetailPage() {
         )}
       </div>
 
-      {/* Gate banner */}
+      {/* Gate banners */}
       {!isAuthenticated && (
-        <div
-          className="flex items-center gap-3 px-4 py-3 rounded-xl mb-6 text-sm"
-          style={{ backgroundColor: "#1a1a28", border: "1px solid #2e2e44" }}
-        >
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl mb-6 text-sm" style={{ backgroundColor: "#1a1a28", border: "1px solid #2e2e44" }}>
           <LogIn size={14} style={{ color: "#a78bfa" }} />
           <span style={{ color: "#8b8b9e" }}>Sign in to request to join this cohort.</span>
-          <Link href="/login" className="ml-auto text-xs font-semibold flex-shrink-0" style={{ color: "#a78bfa" }}>
-            Sign in →
-          </Link>
+          <Link href="/login" className="ml-auto text-xs font-semibold flex-shrink-0" style={{ color: "#a78bfa" }}>Sign in →</Link>
         </div>
       )}
       {isAuthenticated && !currentUser?.verified && (
-        <div
-          className="flex items-center gap-3 px-4 py-3 rounded-xl mb-6 text-sm"
-          style={{ backgroundColor: "#1a1208", border: "1px solid #5c3b12" }}
-        >
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl mb-6 text-sm" style={{ backgroundColor: "#1a1208", border: "1px solid #5c3b12" }}>
           <ShieldAlert size={14} style={{ color: "#fb923c" }} />
-          <span style={{ color: "#8b8b9e" }}>Verify your account to join this cohort. Connect GitHub or LinkedIn from your profile.</span>
-          <Link href={`/profile/${currentUser?.id}`} className="ml-auto text-xs font-semibold flex-shrink-0" style={{ color: "#fb923c" }}>
-            Verify →
-          </Link>
+          <span style={{ color: "#8b8b9e" }}>Verify your account to join this cohort.</span>
+          <Link href={`/profile/${currentUser?.id}`} className="ml-auto text-xs font-semibold flex-shrink-0" style={{ color: "#fb923c" }}>Verify →</Link>
         </div>
       )}
 
@@ -136,23 +145,22 @@ export default function CohortDetailPage() {
           {isOwner && (
             <div className="rounded-2xl border p-5" style={{ backgroundColor: "#111118", borderColor: "#1e1e2e" }}>
               <h2 className="text-sm font-semibold text-white mb-4">
-                Pending requests {pendingRequests.length > 0 && `(${pendingRequests.length})`}
+                Pending requests{pendingRequests.length > 0 ? ` (${pendingRequests.length})` : ""}
               </h2>
               {pendingRequests.length === 0 ? (
                 <p className="text-xs" style={{ color: "#8b8b9e" }}>No pending requests right now.</p>
               ) : (
                 <div className="flex flex-col gap-3">
                   {pendingRequests.map((req) => {
-                    const requester = getUserById(req.userId);
-                    if (!requester) return null;
+                    const p = req.profiles;
                     return (
                       <div key={req.id} className="flex items-center gap-3">
-                        <VerifiedAvatar name={requester.name} avatarUrl={requester.avatarUrl} verified={requester.verified} size="sm" />
+                        <VerifiedAvatar name={p.name} avatarUrl={p.avatar_url} verified={p.verified} size="sm" />
                         <div className="flex-1 min-w-0">
-                          <Link href={`/profile/${requester.id}`} className="text-sm font-medium text-white hover:underline">
-                            {requester.name}
+                          <Link href={`/profile/${p.id}`} className="text-sm font-medium text-white hover:underline">
+                            {p.name}
                           </Link>
-                          <p className="text-xs truncate" style={{ color: "#8b8b9e" }}>{requester.major}</p>
+                          {p.major && <p className="text-xs truncate" style={{ color: "#8b8b9e" }}>{p.major}</p>}
                         </div>
                         <button
                           onClick={() => handleApprove(req.id)}
@@ -180,13 +188,9 @@ export default function CohortDetailPage() {
           <div className="rounded-2xl border p-5" style={{ backgroundColor: "#111118", borderColor: "#1e1e2e" }}>
             <h2 className="text-sm font-semibold text-white mb-3">Open roles</h2>
             <div className="flex flex-wrap gap-2">
-              {cohort.rolesOpen.length > 0 ? (
-                cohort.rolesOpen.map((role) => (
-                  <span
-                    key={role}
-                    className="text-xs px-3 py-1.5 rounded-lg font-medium"
-                    style={{ backgroundColor: "#6633ee15", color: "#a78bfa", border: "1px solid #6633ee33" }}
-                  >
+              {(cohort.roles_open ?? []).length > 0 ? (
+                (cohort.roles_open ?? []).map((role) => (
+                  <span key={role} className="text-xs px-3 py-1.5 rounded-lg font-medium" style={{ backgroundColor: "#6633ee15", color: "#a78bfa", border: "1px solid #6633ee33" }}>
                     {role}
                   </span>
                 ))
@@ -202,21 +206,33 @@ export default function CohortDetailPage() {
           {/* Members */}
           <div className="rounded-2xl border p-5" style={{ backgroundColor: "#111118", borderColor: "#1e1e2e" }}>
             <h2 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-              <Users size={15} style={{ color: "#6633ee" }} /> Members ({cohort.memberIds.length}/{cohort.teamSize})
+              <Users size={15} style={{ color: "#6633ee" }} />
+              Members ({acceptedMembers.length}/{cohort.team_size})
             </h2>
-            <div className="flex flex-col gap-3">
-              {members.map((member) =>
-                member ? (
-                  <Link key={member.id} href={`/profile/${member.id}`} className="flex items-center gap-2">
-                    <VerifiedAvatar name={member.name} avatarUrl={member.avatarUrl} verified={member.verified} size="sm" />
-                    <div>
-                      <p className="text-xs font-medium text-white hover:underline">{member.name}</p>
-                      <p className="text-xs" style={{ color: "#8b8b9e" }}>{member.major.split(" ")[0]}</p>
-                    </div>
-                  </Link>
-                ) : null
-              )}
-            </div>
+            {acceptedMembers.length === 0 ? (
+              <p className="text-xs" style={{ color: "#8b8b9e" }}>No members yet.</p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {acceptedMembers.map((m) => {
+                  const p = m.profiles;
+                  return (
+                    <Link key={m.user_id} href={`/profile/${p.id}`} className="flex items-center gap-2">
+                      <VerifiedAvatar name={p.name} avatarUrl={p.avatar_url} verified={p.verified} size="sm" />
+                      <div>
+                        <p className="text-xs font-medium text-white hover:underline">{p.name}</p>
+                        {p.major && <p className="text-xs" style={{ color: "#8b8b9e" }}>{p.major.split(" ")[0]}</p>}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Spots */}
+          <div className="rounded-2xl border p-4 text-center" style={{ backgroundColor: "#111118", borderColor: "#1e1e2e" }}>
+            <span className="text-2xl font-bold text-white">{spotsLeft}</span>
+            <p className="text-xs mt-0.5" style={{ color: "#8b8b9e" }}>spot{spotsLeft !== 1 ? "s" : ""} open</p>
           </div>
 
           {/* CTA */}
@@ -224,12 +240,14 @@ export default function CohortDetailPage() {
             onClick={handleRequestToJoin}
             className={cn(
               "w-full py-2.5 rounded-xl text-sm font-semibold transition-opacity flex items-center justify-center gap-1.5",
-              isMember || requested || !canJoin ? "text-white opacity-50 cursor-not-allowed" : "text-white hover:opacity-90"
+              isMember || requested || !canJoin || isOwner ? "text-white opacity-50 cursor-not-allowed" : "text-white hover:opacity-90"
             )}
             style={{ background: "linear-gradient(135deg, #6633ee, #7744ff)" }}
-            disabled={!canJoin || isMember || requested}
+            disabled={!canJoin || isMember || requested || isOwner}
           >
-            {isMember ? (
+            {isOwner ? (
+              "You own this cohort"
+            ) : isMember ? (
               <><CheckCircle2 size={15} /> You&apos;re a member</>
             ) : requested ? (
               <><Clock size={15} /> Requested</>
