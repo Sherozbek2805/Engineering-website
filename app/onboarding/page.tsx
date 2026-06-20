@@ -116,8 +116,8 @@ export default function OnboardingPage() {
     return Math.round(req + opt);
   }, [requiredDone, requiredTotal, optionalDone, optionalTotal]);
 
-  function persist(navigateOnward: boolean) {
-    updateCurrentUser({
+  async function persist(navigateOnward: boolean) {
+    await updateCurrentUser({
       name: name.trim(),
       school: school.trim(),
       country: country.trim(),

@@ -30,6 +30,7 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const strength = getStrength(password);
 
@@ -41,7 +42,7 @@ export default function SignupPage() {
   };
   const labelStyle = { color: "#8b8b9e", fontSize: "13px", fontWeight: 500 as const };
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
@@ -50,8 +51,11 @@ export default function SignupPage() {
     if (password.length < 6) return setError("Password must be at least 6 characters.");
     if (password !== confirmPassword) return setError("Passwords don't match.");
 
-    const result = signup(name, email, password);
-    if ("error" in result) {
+    setLoading(true);
+    const result = await signup(name, email, password);
+    setLoading(false);
+
+    if (result.error) {
       setError(result.error);
       return;
     }
@@ -117,7 +121,6 @@ export default function SignupPage() {
             />
           </div>
 
-          {/* Password with toggle + strength meter */}
           <div className="flex flex-col gap-1.5">
             <label style={labelStyle}>Password</label>
             <div className="relative">
@@ -142,7 +145,6 @@ export default function SignupPage() {
               </button>
             </div>
 
-            {/* Strength indicator */}
             {password && (
               <div className="flex flex-col gap-1.5 mt-0.5">
                 <div className="flex gap-1">
@@ -150,23 +152,18 @@ export default function SignupPage() {
                     <div
                       key={i}
                       className="h-1 flex-1 rounded-full transition-all duration-200"
-                      style={{
-                        backgroundColor: i <= strength.score ? strength.color : "#1e1e2e",
-                      }}
+                      style={{ backgroundColor: i <= strength.score ? strength.color : "#1e1e2e" }}
                     />
                   ))}
                 </div>
                 <p className="text-xs flex items-center gap-1.5">
-                  <span style={{ color: strength.color }} className="font-medium">
-                    {strength.label}
-                  </span>
+                  <span style={{ color: strength.color }} className="font-medium">{strength.label}</span>
                   <span style={{ color: "#5a5a6e" }}>— {strength.hint}</span>
                 </p>
               </div>
             )}
           </div>
 
-          {/* Confirm password with toggle */}
           <div className="flex flex-col gap-1.5">
             <label style={labelStyle}>Confirm password</label>
             <div className="relative">
@@ -190,12 +187,8 @@ export default function SignupPage() {
                 {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
             </div>
-            {/* Match indicator */}
             {confirmPassword && (
-              <p
-                className="text-xs mt-0.5"
-                style={{ color: confirmPassword === password ? "#34d399" : "#f87171" }}
-              >
+              <p className="text-xs mt-0.5" style={{ color: confirmPassword === password ? "#34d399" : "#f87171" }}>
                 {confirmPassword === password ? "Passwords match" : "Passwords don't match yet"}
               </p>
             )}
@@ -203,11 +196,12 @@ export default function SignupPage() {
 
           <button
             type="submit"
-            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90 mt-1"
+            disabled={loading}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90 mt-1 disabled:opacity-60"
             style={{ background: "linear-gradient(135deg, #6633ee, #7744ff)" }}
           >
             <UserPlus size={15} />
-            Sign up
+            {loading ? "Creating account…" : "Sign up"}
           </button>
         </form>
 

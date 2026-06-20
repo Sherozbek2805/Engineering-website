@@ -3,7 +3,6 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
 import { Cpu, LogIn, AlertCircle, CheckCircle2, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
@@ -21,7 +20,7 @@ function GoogleIcon() {
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login } = useAuth();
+  const { login, signInWithGoogle } = useAuth();
   const justRegistered = searchParams.get("registered") === "1";
   const oauthError = searchParams.get("error");
 
@@ -31,6 +30,7 @@ function LoginContent() {
   const [error, setError] = useState(
     oauthError ? "Google sign-in failed. Please try again or use email/password." : ""
   );
+  const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
   const inputStyle = {
@@ -41,22 +41,26 @@ function LoginContent() {
   };
   const labelStyle = { color: "#8b8b9e", fontSize: "13px", fontWeight: 500 as const };
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setLoading(true);
 
-    const user = login(email.trim(), password);
-    if (!user) {
-      setError("Invalid email or password.");
+    const result = await login(email.trim(), password);
+    setLoading(false);
+
+    if (result.error || !result.user) {
+      setError(result.error ?? "Invalid email or password.");
       return;
     }
-    router.push(user.profileCompleted ? "/engineering" : "/onboarding");
+    router.push(result.user.profileCompleted ? "/engineering" : "/onboarding");
   }
 
   async function handleGoogle() {
     setError("");
     setGoogleLoading(true);
-    await signIn("google", { callbackUrl: "/auth/google-callback" });
+    await signInWithGoogle();
+    // Page will redirect; no need to reset state
   }
 
   return (
@@ -141,11 +145,12 @@ function LoginContent() {
 
           <button
             type="submit"
-            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90 mt-1"
+            disabled={loading}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90 mt-1 disabled:opacity-60"
             style={{ background: "linear-gradient(135deg, #6633ee, #7744ff)" }}
           >
             <LogIn size={15} />
-            Log in
+            {loading ? "Logging in…" : "Log in"}
           </button>
 
           <div className="flex items-center gap-2 my-1">
@@ -171,10 +176,6 @@ function LoginContent() {
           <Link href="/signup" className="font-medium hover:underline" style={{ color: "#a78bfa" }}>
             Sign up
           </Link>
-        </p>
-
-        <p className="text-center text-xs mt-4" style={{ color: "#5a5a6e" }}>
-          Demo account: akbar@buildnet.dev / buildnet123
         </p>
       </div>
     </div>

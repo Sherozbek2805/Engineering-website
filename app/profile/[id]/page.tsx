@@ -1,11 +1,14 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, MapPin, GraduationCap, Trophy, Zap, Github, Linkedin, FolderOpen, ShieldAlert, ShieldCheck } from "lucide-react";
 import { getUserById, getProjectsByIds } from "@/lib/mock-data";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import VerifiedAvatar from "@/components/VerifiedAvatar";
 import ProjectCard from "@/components/ProjectCard";
+import type { User } from "@/lib/mock-data";
 
 const AVAILABILITY_STYLES: Record<string, { bg: string; text: string; dot: string }> = {
   "Looking for projects": { bg: "bg-sky-500/15", text: "text-sky-400", dot: "bg-sky-400" },
@@ -14,11 +17,66 @@ const AVAILABILITY_STYLES: Record<string, { bg: string; text: string; dot: strin
   "Not available": { bg: "bg-zinc-500/15", text: "text-zinc-400", dot: "bg-zinc-400" },
 };
 
+function rowToUser(row: Record<string, unknown>): User {
+  return {
+    id: row.id as string,
+    name: (row.name as string) ?? "",
+    email: (row.email as string) ?? "",
+    school: (row.school as string) ?? "",
+    country: (row.country as string) ?? "",
+    region: (row.region as string) ?? "",
+    major: (row.major as string) ?? "",
+    bio: (row.bio as string) ?? "",
+    avatarUrl: (row.avatar_url as string) ?? "",
+    verified: (row.verified as boolean) ?? false,
+    verificationProvider: row.verification_provider as "github" | "linkedin" | undefined,
+    builderScore: (row.builder_score as number) ?? 0,
+    skills: (row.skills as User["skills"]) ?? [],
+    interests: (row.interests as string[]) ?? [],
+    portfolio: (row.portfolio as User["portfolio"]) ?? [],
+    githubUrl: (row.github_url as string) ?? "",
+    linkedinUrl: (row.linkedin_url as string) ?? "",
+    availability: (row.availability as User["availability"]) ?? "Not available",
+    profileCompleted: (row.profile_completed as boolean) ?? false,
+    role: (row.role as User["role"]) ?? "builder",
+    projectIds: (row.project_ids as string[]) ?? [],
+    joinedCommunityIds: (row.joined_community_ids as string[]) ?? [],
+  };
+}
+
 export default function ProfilePage() {
   const params = useParams();
   const router = useRouter();
   const { currentUser, verify } = useAuth();
-  const user = getUserById(params.id as string);
+  const profileId = params.id as string;
+
+  // Try mock-data first (for seeded demo users u1-u6)
+  const mockUser = getUserById(profileId);
+  const [dbUser, setDbUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(!mockUser);
+
+  useEffect(() => {
+    if (mockUser) return; // Already found in mock data
+    supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", profileId)
+      .single()
+      .then(({ data }) => {
+        if (data) setDbUser(rowToUser(data as Record<string, unknown>));
+        setLoading(false);
+      });
+  }, [profileId, mockUser]);
+
+  const user = mockUser ?? dbUser;
+
+  if (loading) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-24 text-center">
+        <p className="text-sm" style={{ color: "#8b8b9e" }}>Loading profile…</p>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
@@ -32,7 +90,7 @@ export default function ProfilePage() {
   }
 
   const userProjects = getProjectsByIds(user.projectIds);
-  const avail = AVAILABILITY_STYLES[user.availability];
+  const avail = AVAILABILITY_STYLES[user.availability] ?? AVAILABILITY_STYLES["Not available"];
   const isOwnProfile = currentUser?.id === user.id;
 
   return (
@@ -78,15 +136,21 @@ export default function ProfilePage() {
             )}
 
             <div className="flex flex-col gap-1 w-full text-left">
-              <div className="flex items-center gap-2 text-xs" style={{ color: "#8b8b9e" }}>
-                <GraduationCap size={13} style={{ color: "#6633ee" }} /> {user.school}
-              </div>
-              <div className="flex items-center gap-2 text-xs" style={{ color: "#8b8b9e" }}>
-                <MapPin size={13} style={{ color: "#6633ee" }} /> {user.country}
-              </div>
-              <div className="flex items-center gap-2 text-xs" style={{ color: "#8b8b9e" }}>
-                <Zap size={13} style={{ color: "#6633ee" }} /> {user.major}
-              </div>
+              {user.school && (
+                <div className="flex items-center gap-2 text-xs" style={{ color: "#8b8b9e" }}>
+                  <GraduationCap size={13} style={{ color: "#6633ee" }} /> {user.school}
+                </div>
+              )}
+              {user.country && (
+                <div className="flex items-center gap-2 text-xs" style={{ color: "#8b8b9e" }}>
+                  <MapPin size={13} style={{ color: "#6633ee" }} /> {user.country}
+                </div>
+              )}
+              {user.major && (
+                <div className="flex items-center gap-2 text-xs" style={{ color: "#8b8b9e" }}>
+                  <Zap size={13} style={{ color: "#6633ee" }} /> {user.major}
+                </div>
+              )}
             </div>
 
             {/* Builder score */}
@@ -160,16 +224,18 @@ export default function ProfilePage() {
           </div>
 
           {/* Interests */}
-          <div className="rounded-2xl border p-5" style={{ backgroundColor: "#111118", borderColor: "#1e1e2e" }}>
-            <h2 className="text-sm font-semibold text-white mb-3">Interests</h2>
-            <div className="flex flex-wrap gap-1.5">
-              {user.interests.map((interest) => (
-                <span key={interest} className="text-xs px-2.5 py-1 rounded-full" style={{ backgroundColor: "#1a1a28", color: "#8b8b9e" }}>
-                  {interest}
-                </span>
-              ))}
+          {user.interests.length > 0 && (
+            <div className="rounded-2xl border p-5" style={{ backgroundColor: "#111118", borderColor: "#1e1e2e" }}>
+              <h2 className="text-sm font-semibold text-white mb-3">Interests</h2>
+              <div className="flex flex-wrap gap-1.5">
+                {user.interests.map((interest) => (
+                  <span key={interest} className="text-xs px-2.5 py-1 rounded-full" style={{ backgroundColor: "#1a1a28", color: "#8b8b9e" }}>
+                    {interest}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Portfolio */}
           {user.portfolio.length > 0 && (
@@ -193,32 +259,34 @@ export default function ProfilePage() {
         {/* Right: skills + projects */}
         <div className="md:col-span-2 flex flex-col gap-6">
           {/* Skills */}
-          <div className="rounded-2xl border p-5" style={{ backgroundColor: "#111118", borderColor: "#1e1e2e" }}>
-            <h2 className="text-sm font-semibold text-white mb-4">Skills</h2>
-            <div className="flex flex-col gap-3">
-              {user.skills.map((skill) => (
-                <div key={skill.name}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-white">{skill.name}</span>
-                    <span className="text-xs font-semibold" style={{ color: "#a78bfa" }}>{skill.rating}/10</span>
+          {user.skills.length > 0 && (
+            <div className="rounded-2xl border p-5" style={{ backgroundColor: "#111118", borderColor: "#1e1e2e" }}>
+              <h2 className="text-sm font-semibold text-white mb-4">Skills</h2>
+              <div className="flex flex-col gap-3">
+                {user.skills.map((skill) => (
+                  <div key={skill.name}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-white">{skill.name}</span>
+                      <span className="text-xs font-semibold" style={{ color: "#a78bfa" }}>{skill.rating}/10</span>
+                    </div>
+                    <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "#1e1e2e" }}>
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${(skill.rating / 10) * 100}%`,
+                          background: skill.rating >= 8
+                            ? "linear-gradient(90deg, #6633ee, #a855f7)"
+                            : skill.rating >= 6
+                            ? "linear-gradient(90deg, #3b82f6, #6366f1)"
+                            : "linear-gradient(90deg, #0ea5e9, #3b82f6)",
+                        }}
+                      />
+                    </div>
                   </div>
-                  <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "#1e1e2e" }}>
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${(skill.rating / 10) * 100}%`,
-                        background: skill.rating >= 8
-                          ? "linear-gradient(90deg, #6633ee, #a855f7)"
-                          : skill.rating >= 6
-                          ? "linear-gradient(90deg, #3b82f6, #6366f1)"
-                          : "linear-gradient(90deg, #0ea5e9, #3b82f6)",
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Projects */}
           <div>
