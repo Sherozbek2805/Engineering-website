@@ -9,10 +9,12 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   profileCompleted: boolean;
+  isGoogleLinked: boolean;
   login: (email: string, password: string) => Promise<{ user?: User; error?: string }>;
   signup: (name: string, email: string, password: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  linkGoogle: () => Promise<{ error?: string }>;
   updateCurrentUser: (updates: Partial<User>) => Promise<void>;
   verify: (provider: "github" | "linkedin") => Promise<void>;
 }
@@ -54,15 +56,22 @@ async function fetchProfile(userId: string): Promise<User | null> {
   return rowToUser(data as Record<string, unknown>);
 }
 
+async function fetchIsGoogleLinked(): Promise<boolean> {
+  const { data: { user } } = await supabase.auth.getUser();
+  return user?.identities?.some((i) => i.provider === "google") ?? false;
+}
+
 const AuthContext = createContext<AuthContextType>({
   currentUser: null,
   isAuthenticated: false,
   isLoading: true,
   profileCompleted: false,
+  isGoogleLinked: false,
   login: async () => ({ error: "Not ready" }),
   signup: async () => ({ error: "Not ready" }),
   signOut: async () => {},
   signInWithGoogle: async () => {},
+  linkGoogle: async () => ({}),
   updateCurrentUser: async () => {},
   verify: async () => {},
 });
@@ -70,13 +79,17 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isGoogleLinked, setIsGoogleLinked] = useState(false);
 
   useEffect(() => {
-    // Load session on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        fetchProfile(session.user.id).then((user) => {
+        Promise.all([
+          fetchProfile(session.user.id),
+          fetchIsGoogleLinked(),
+        ]).then(([user, googleLinked]) => {
           setCurrentUser(user);
+          setIsGoogleLinked(googleLinked);
           setIsLoading(false);
         });
       } else {
@@ -84,13 +97,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    // Keep in sync with auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        const user = await fetchProfile(session.user.id);
+        const [user, googleLinked] = await Promise.all([
+          fetchProfile(session.user.id),
+          fetchIsGoogleLinked(),
+        ]);
         setCurrentUser(user);
+        setIsGoogleLinked(googleLinked);
       } else {
         setCurrentUser(null);
+        setIsGoogleLinked(false);
       }
       setIsLoading(false);
     });
@@ -101,20 +118,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function login(email: string, password: string): Promise<{ user?: User; error?: string }> {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      // Check if this email exists at all — if so, the account was created via Google (no password set)
+      // Check if this email exists — could be Google-only or just wrong password
       const { data: profile } = await supabase
         .from("profiles")
         .select("id")
         .eq("email", email.trim().toLowerCase())
         .maybeSingle();
       if (profile) {
-        return { error: "This account was created with Google. Please use 'Continue with Google' to log in." };
+        return { error: "Wrong password — or if you signed up with Google, try 'Continue with Google' instead." };
       }
       return { error: "Invalid email or password." };
     }
     if (!data.user) return { error: "Login failed. Please try again." };
-    const user = await fetchProfile(data.user.id);
+    const [user, googleLinked] = await Promise.all([
+      fetchProfile(data.user.id),
+      fetchIsGoogleLinked(),
+    ]);
     if (user) setCurrentUser(user);
+    setIsGoogleLinked(googleLinked);
     return { user: user ?? undefined };
   }
 
@@ -140,6 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signOut(): Promise<void> {
     await supabase.auth.signOut();
     setCurrentUser(null);
+    setIsGoogleLinked(false);
   }
 
   async function signInWithGoogle(): Promise<void> {
@@ -147,6 +169,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       provider: "google",
       options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
+  }
+
+  async function linkGoogle(): Promise<{ error?: string }> {
+    const { error } = await supabase.auth.linkIdentity({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+    if (error) return { error: error.message };
+    return {};
   }
 
   async function updateCurrentUser(updates: Partial<User>): Promise<void> {
@@ -187,10 +218,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: currentUser !== null,
         isLoading,
         profileCompleted: currentUser?.profileCompleted ?? false,
+        isGoogleLinked,
         login,
         signup,
         signOut,
         signInWithGoogle,
+        linkGoogle,
         updateCurrentUser,
         verify,
       }}

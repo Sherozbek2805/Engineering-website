@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, MapPin, GraduationCap, Trophy, Zap, Github, Linkedin, FolderOpen, ShieldAlert, ShieldCheck } from "lucide-react";
+import { ArrowLeft, MapPin, GraduationCap, Trophy, Zap, Github, Linkedin, FolderOpen, ShieldAlert, ShieldCheck, Chrome } from "lucide-react";
 import { getUserById } from "@/lib/mock-data";
 import { supabase } from "@/lib/supabase";
 import { getProjectsByOwnerId, type DbProject } from "@/lib/db";
@@ -48,7 +48,7 @@ function rowToUser(row: Record<string, unknown>): User {
 export default function ProfilePage() {
   const params = useParams();
   const router = useRouter();
-  const { currentUser, verify } = useAuth();
+  const { currentUser, verify, linkGoogle, isGoogleLinked } = useAuth();
   const profileId = params.id as string;
 
   const mockUser = getUserById(profileId);
@@ -224,6 +224,37 @@ export default function ProfilePage() {
                     <Linkedin size={13} /> Connect LinkedIn
                   </button>
                 </div>
+              </div>
+            )}
+
+            {/* Google login link — own profile only */}
+            {isOwnProfile && (
+              <div
+                className="w-full rounded-xl p-4 flex flex-col gap-2"
+                style={{ backgroundColor: "#111118", border: "1px solid #1e1e2e" }}
+              >
+                <p className="text-xs font-semibold text-white">Google login</p>
+                {isGoogleLinked ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: "#14532d" }}>
+                      <ShieldCheck size={11} className="text-green-400" />
+                    </div>
+                    <span className="text-xs" style={{ color: "#34d399" }}>Google account linked — you can log in with either method</span>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-xs" style={{ color: "#8b8b9e" }}>
+                      Link Google so you can sign in with either your password or Google.
+                    </p>
+                    <button
+                      onClick={() => linkGoogle()}
+                      className="flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-opacity hover:opacity-90 mt-1"
+                      style={{ backgroundColor: "#1a1208", color: "#fbbf24", border: "1px solid #5c3b12" }}
+                    >
+                      <Chrome size={13} /> Link Google account
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>
