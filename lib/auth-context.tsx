@@ -118,14 +118,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function login(email: string, password: string): Promise<{ user?: User; error?: string }> {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      // Check if this email exists — could be Google-only or just wrong password
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("email", email.trim().toLowerCase())
-        .maybeSingle();
-      if (profile) {
-        return { error: "Wrong password — or if you signed up with Google, try 'Continue with Google' instead." };
+      if (error.message.toLowerCase().includes("email not confirmed")) {
+        return { error: "Your email hasn't been confirmed yet. Check your inbox or ask an admin to confirm it." };
       }
       return { error: "Invalid email or password." };
     }
