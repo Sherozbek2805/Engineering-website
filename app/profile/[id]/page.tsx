@@ -190,6 +190,19 @@ export default function ProfilePage() {
               {user.availability}
             </span>
 
+            {/* CV download */}
+            {user.cvUrl && (
+              <a
+                href={user.cvUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium w-full justify-center transition-opacity hover:opacity-80"
+                style={{ backgroundColor: "#1a1a28", color: "#a78bfa", border: "1px solid #2e2e44" }}
+              >
+                <FolderOpen size={13} /> View CV / Resume
+              </a>
+            )}
+
             {/* Social links */}
             {(user.githubUrl || user.linkedinUrl) && (
               <div className="flex items-center gap-2">

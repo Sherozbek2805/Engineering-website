@@ -38,6 +38,7 @@ function rowToUser(row: Record<string, unknown>): User {
     portfolio: (row.portfolio as User["portfolio"]) ?? [],
     extracurriculars: (row.extracurriculars as User["extracurriculars"]) ?? [],
     honors: (row.honors as User["honors"]) ?? [],
+    cvUrl: (row.cv_url as string) ?? undefined,
     githubUrl: (row.github_url as string) ?? "",
     linkedinUrl: (row.linkedin_url as string) ?? "",
     availability: (row.availability as User["availability"]) ?? "Not available",
@@ -187,6 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (updates.major !== undefined) dbUpdates.major = updates.major;
     if (updates.bio !== undefined) dbUpdates.bio = updates.bio;
     if (updates.avatarUrl !== undefined) dbUpdates.avatar_url = updates.avatarUrl;
+    if (updates.cvUrl !== undefined) dbUpdates.cv_url = updates.cvUrl;
     if (updates.githubUrl !== undefined) dbUpdates.github_url = updates.githubUrl;
     if (updates.linkedinUrl !== undefined) dbUpdates.linkedin_url = updates.linkedinUrl;
     if (updates.skills !== undefined) dbUpdates.skills = updates.skills;

@@ -36,6 +36,7 @@ export type User = {
   portfolio: PortfolioItem[];
   extracurriculars: Extracurricular[];
   honors: Honor[];
+  cvUrl?: string;
   githubUrl: string;
   linkedinUrl: string;
   availability:
