@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Camera, Plus, X, Github, Linkedin, ArrowRight, CheckCircle2,
 } from "lucide-react";
@@ -12,16 +12,23 @@ import VerifiedAvatar from "@/components/VerifiedAvatar";
 const REQUIRED_WEIGHT = 70;
 const OPTIONAL_WEIGHT = 30;
 
-export default function OnboardingPage() {
+const AVAILABILITY_OPTIONS = [
+  "Looking for projects",
+  "Looking for team members",
+  "Looking for internship",
+  "Not available",
+] as const;
+
+function OnboardingContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isEditMode = searchParams.get("from") === "profile";
   const { currentUser, isAuthenticated, updateCurrentUser } = useAuth();
 
-  // Redirect anyone who lands here without being signed in.
   useEffect(() => {
     if (!isAuthenticated) router.replace("/");
   }, [isAuthenticated, router]);
 
-  // ── Form state, prefilled from whatever the user already has ───────────────
   const [avatarUrl, setAvatarUrl] = useState(currentUser?.avatarUrl ?? "");
   const [name, setName] = useState(currentUser?.name ?? "");
   const [school, setSchool] = useState(currentUser?.school ?? "");
@@ -29,6 +36,9 @@ export default function OnboardingPage() {
   const [region, setRegion] = useState(currentUser?.region ?? "");
   const [major, setMajor] = useState(currentUser?.major ?? "");
   const [bio, setBio] = useState(currentUser?.bio ?? "");
+  const [availability, setAvailability] = useState<typeof AVAILABILITY_OPTIONS[number]>(
+    (currentUser?.availability as typeof AVAILABILITY_OPTIONS[number]) ?? "Not available"
+  );
   const [githubUrl, setGithubUrl] = useState(currentUser?.githubUrl ?? "");
   const [linkedinUrl, setLinkedinUrl] = useState(currentUser?.linkedinUrl ?? "");
 
@@ -87,7 +97,6 @@ export default function OnboardingPage() {
     setPortfolio((p) => p.filter((item) => item.title !== title));
   }
 
-  // ── Required fields (must match the gating rule used by ProfileGate) ──────
   const requiredChecks = {
     name: name.trim().length > 0,
     school: school.trim().length > 0,
@@ -124,6 +133,7 @@ export default function OnboardingPage() {
       region: region.trim(),
       major: major.trim(),
       bio: bio.trim(),
+      availability: availability,
       avatarUrl,
       githubUrl: githubUrl.trim(),
       linkedinUrl: linkedinUrl.trim(),
@@ -133,12 +143,14 @@ export default function OnboardingPage() {
       profileCompleted: isComplete,
     });
     if (navigateOnward) {
-      if (isComplete) {
-        setSaved(true);
-        setTimeout(() => router.push("/engineering"), 600);
-      } else {
-        router.push("/engineering");
-      }
+      setSaved(true);
+      setTimeout(() => {
+        if (isEditMode && currentUser?.id) {
+          router.push(`/profile/${currentUser!.id}`);
+        } else {
+          router.push("/engineering");
+        }
+      }, 600);
     }
   }
 
@@ -146,13 +158,14 @@ export default function OnboardingPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
-      {/* Header */}
       <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold text-white mb-2">Build your profile</h1>
+        <h1 className="text-2xl font-bold text-white mb-2">
+          {isEditMode ? "Edit your profile" : "Build your profile"}
+        </h1>
         <p className="text-sm max-w-md mx-auto" style={{ color: "#8b8b9e" }}>
-          Think of this as the Common App for builders — tell us what you're
-          studying and what you've made, and we'll connect you to the right
-          teams and opportunities.
+          {isEditMode
+            ? "Update your info — changes are saved immediately."
+            : "Think of this as the Common App for builders — tell us what you're studying and what you've made, and we'll connect you to the right teams and opportunities."}
         </p>
       </div>
 
@@ -239,6 +252,19 @@ export default function OnboardingPage() {
               ))}
             </select>
           </div>
+          <div className="sm:col-span-2">
+            <label className="text-xs font-medium block mb-1.5" style={{ color: "#8b8b9e" }}>Availability</label>
+            <select
+              value={availability}
+              onChange={(e) => setAvailability(e.target.value as typeof AVAILABILITY_OPTIONS[number])}
+              className="w-full px-3 py-2.5 text-sm rounded-xl outline-none text-white"
+              style={{ backgroundColor: "#0a0a0f", border: "1px solid #1e1e2e" }}
+            >
+              {AVAILABILITY_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Bio */}
@@ -279,6 +305,7 @@ export default function OnboardingPage() {
               type="text"
               value={newSkillName}
               onChange={(e) => setNewSkillName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSkill(); } }}
               placeholder="e.g. CAD / SolidWorks"
               className="flex-1 px-3 py-2 text-sm rounded-lg outline-none text-white"
               style={{ backgroundColor: "#0a0a0f", border: "1px solid #1e1e2e" }}
@@ -426,35 +453,53 @@ export default function OnboardingPage() {
 
         {/* Actions */}
         <div className="flex items-center justify-between gap-3 pt-2">
-          <button
-            type="button"
-            onClick={() => persist(true)}
-            className="text-sm font-medium px-4 py-2.5 rounded-xl transition-colors hover:text-white"
-            style={{ color: "#8b8b9e" }}
-          >
-            Skip for now
-          </button>
+          {isEditMode ? (
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="text-sm font-medium px-4 py-2.5 rounded-xl transition-colors hover:text-white"
+              style={{ color: "#8b8b9e" }}
+            >
+              Cancel
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => persist(true)}
+              className="text-sm font-medium px-4 py-2.5 rounded-xl transition-colors hover:text-white"
+              style={{ color: "#8b8b9e" }}
+            >
+              Skip for now
+            </button>
+          )}
           <button
             type="button"
             onClick={() => persist(true)}
             className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
             style={{ background: "linear-gradient(135deg, #6633ee, #7744ff)" }}
           >
-            Save &amp; continue <ArrowRight size={15} />
+            {isEditMode ? "Save changes" : "Save & continue"} <ArrowRight size={15} />
           </button>
         </div>
       </div>
 
-      {/* Toast */}
       {saved && (
         <div
           className="fixed bottom-6 right-6 flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium text-white shadow-2xl z-50"
           style={{ background: "linear-gradient(135deg, #6633ee, #7744ff)" }}
         >
-          <CheckCircle2 size={16} /> Profile complete! Taking you to Engineering…
+          <CheckCircle2 size={16} /> {isEditMode ? "Profile updated!" : "Profile complete! Taking you to Engineering…"}
         </div>
       )}
     </div>
+  );
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={<div className="max-w-3xl mx-auto px-4 py-10"><p style={{ color: "#8b8b9e" }}>Loading…</p></div>}>
+      <OnboardingContent />
+    </Suspense>
   );
 }
 

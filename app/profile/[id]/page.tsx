@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, MapPin, GraduationCap, Trophy, Zap, Github, Linkedin, FolderOpen, ShieldAlert, ShieldCheck, Chrome } from "lucide-react";
+import { ArrowLeft, MapPin, GraduationCap, Trophy, Zap, Github, Linkedin, FolderOpen, ShieldAlert, ShieldCheck, Chrome, Pencil } from "lucide-react";
+import Link from "next/link";
 import { getUserById } from "@/lib/mock-data";
 import { supabase } from "@/lib/supabase";
 import { getProjectsByOwnerId, type DbProject } from "@/lib/db";
@@ -100,13 +101,24 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
-      <button
-        onClick={() => router.back()}
-        className="flex items-center gap-1.5 text-sm mb-6 transition-colors hover:text-white"
-        style={{ color: "#8b8b9e" }}
-      >
-        <ArrowLeft size={15} /> Back
-      </button>
+      <div className="flex items-center justify-between mb-6">
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-1.5 text-sm transition-colors hover:text-white"
+          style={{ color: "#8b8b9e" }}
+        >
+          <ArrowLeft size={15} /> Back
+        </button>
+        {isOwnProfile && (
+          <Link
+            href="/onboarding?from=profile"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-opacity hover:opacity-80"
+            style={{ backgroundColor: "#111118", border: "1px solid #1e1e2e", color: "#a78bfa" }}
+          >
+            <Pencil size={13} /> Edit profile
+          </Link>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Left: identity card */}
