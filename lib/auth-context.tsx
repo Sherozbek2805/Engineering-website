@@ -100,7 +100,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function login(email: string, password: string): Promise<{ user?: User; error?: string }> {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { error: error.message };
+    if (error) {
+      // Check if this email exists at all — if so, the account was created via Google (no password set)
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", email.trim().toLowerCase())
+        .maybeSingle();
+      if (profile) {
+        return { error: "This account was created with Google. Please use 'Continue with Google' to log in." };
+      }
+      return { error: "Invalid email or password." };
+    }
     if (!data.user) return { error: "Login failed. Please try again." };
     const user = await fetchProfile(data.user.id);
     if (user) setCurrentUser(user);
