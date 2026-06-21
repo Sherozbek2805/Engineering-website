@@ -4,6 +4,21 @@ export type Skill = { name: string; rating: number };
 
 export type PortfolioItem = { title: string; url: string };
 
+export type Extracurricular = {
+  name: string;
+  role: string;
+  description: string;
+  hoursPerWeek?: number;
+  yearsActive?: string;
+};
+
+export type Honor = {
+  name: string;
+  organization?: string;
+  year?: string;
+  description?: string;
+};
+
 export type User = {
   id: string;
   name: string;
@@ -19,6 +34,8 @@ export type User = {
   skills: Skill[];
   interests: string[];
   portfolio: PortfolioItem[];
+  extracurriculars: Extracurricular[];
+  honors: Honor[];
   githubUrl: string;
   linkedinUrl: string;
   availability:

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, MapPin, GraduationCap, Trophy, Zap, Github, Linkedin, FolderOpen, ShieldAlert, ShieldCheck, Chrome, Pencil } from "lucide-react";
+import { ArrowLeft, MapPin, GraduationCap, Trophy, Zap, Github, Linkedin, FolderOpen, ShieldAlert, ShieldCheck, Chrome, Pencil, Award, Activity } from "lucide-react";
 import Link from "next/link";
 import { getUserById } from "@/lib/mock-data";
 import { supabase } from "@/lib/supabase";
@@ -36,6 +36,8 @@ function rowToUser(row: Record<string, unknown>): User {
     skills: (row.skills as User["skills"]) ?? [],
     interests: (row.interests as string[]) ?? [],
     portfolio: (row.portfolio as User["portfolio"]) ?? [],
+    extracurriculars: (row.extracurriculars as User["extracurriculars"]) ?? [],
+    honors: (row.honors as User["honors"]) ?? [],
     githubUrl: (row.github_url as string) ?? "",
     linkedinUrl: (row.linkedin_url as string) ?? "",
     availability: (row.availability as User["availability"]) ?? "Not available",
@@ -210,31 +212,39 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* Connect to verify — own profile only, if not yet verified */}
-            {isOwnProfile && !user.verified && (
+            {/* Connect to verify — own profile, show remaining unconnected ones */}
+            {isOwnProfile && (!user.githubUrl || !user.linkedinUrl) && (
               <div
                 className="w-full rounded-xl p-4 flex flex-col gap-2"
                 style={{ backgroundColor: "#1a1208", border: "1px solid #5c3b12" }}
               >
-                <p className="text-xs font-semibold" style={{ color: "#fb923c" }}>Connect to verify</p>
+                <p className="text-xs font-semibold" style={{ color: "#fb923c" }}>
+                  {user.verified ? "Add more social links" : "Connect to verify"}
+                </p>
                 <p className="text-xs leading-relaxed" style={{ color: "#8b8b9e" }}>
-                  Verified builders can join Foundry cohorts and message others.
+                  {user.verified
+                    ? "You're verified! Adding more links strengthens your profile."
+                    : "Add your GitHub or LinkedIn URL in Edit Profile — either one is enough to verify."}
                 </p>
                 <div className="flex flex-col gap-1.5 mt-1">
-                  <button
-                    onClick={() => verify("github")}
-                    className="flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-opacity hover:opacity-90"
-                    style={{ backgroundColor: "#1a1a28", color: "#e2e2f0", border: "1px solid #2e2e44" }}
-                  >
-                    <Github size={13} /> Connect GitHub
-                  </button>
-                  <button
-                    onClick={() => verify("linkedin")}
-                    className="flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-opacity hover:opacity-90"
-                    style={{ backgroundColor: "#0a1628", color: "#60a5fa", border: "1px solid #1e3a5f" }}
-                  >
-                    <Linkedin size={13} /> Connect LinkedIn
-                  </button>
+                  {!user.githubUrl && (
+                    <Link
+                      href="/onboarding?from=profile"
+                      className="flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-opacity hover:opacity-90"
+                      style={{ backgroundColor: "#1a1a28", color: "#e2e2f0", border: "1px solid #2e2e44" }}
+                    >
+                      <Github size={13} /> Add GitHub URL
+                    </Link>
+                  )}
+                  {!user.linkedinUrl && (
+                    <Link
+                      href="/onboarding?from=profile"
+                      className="flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-opacity hover:opacity-90"
+                      style={{ backgroundColor: "#0a1628", color: "#60a5fa", border: "1px solid #1e3a5f" }}
+                    >
+                      <Linkedin size={13} /> Add LinkedIn URL
+                    </Link>
+                  )}
                 </div>
               </div>
             )}
@@ -304,7 +314,7 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {/* Right: skills + projects */}
+        {/* Right: skills + extracurriculars + honors + projects */}
         <div className="md:col-span-2 flex flex-col gap-6">
           {/* Skills */}
           {user.skills.length > 0 && (
@@ -330,6 +340,53 @@ export default function ProfilePage() {
                         }}
                       />
                     </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Extracurricular Activities */}
+          {user.extracurriculars?.length > 0 && (
+            <div className="rounded-2xl border p-5" style={{ backgroundColor: "#111118", borderColor: "#1e1e2e" }}>
+              <h2 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+                <Activity size={14} style={{ color: "#6633ee" }} /> Extracurricular Activities
+              </h2>
+              <div className="flex flex-col gap-4">
+                {user.extracurriculars.map((ec, i) => (
+                  <div key={i} className="border-l-2 pl-4" style={{ borderColor: "#6633ee44" }}>
+                    <p className="text-sm font-semibold text-white">{ec.name}</p>
+                    <p className="text-xs font-medium mt-0.5" style={{ color: "#a78bfa" }}>{ec.role}</p>
+                    {ec.description && <p className="text-xs mt-1 leading-relaxed" style={{ color: "#8b8b9e" }}>{ec.description}</p>}
+                    {(ec.hoursPerWeek || ec.yearsActive) && (
+                      <p className="text-xs mt-1" style={{ color: "#5a5a6e" }}>
+                        {ec.hoursPerWeek ? `${ec.hoursPerWeek}h/week` : ""}
+                        {ec.hoursPerWeek && ec.yearsActive ? " · " : ""}
+                        {ec.yearsActive}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Honors & Awards */}
+          {user.honors?.length > 0 && (
+            <div className="rounded-2xl border p-5" style={{ backgroundColor: "#111118", borderColor: "#1e1e2e" }}>
+              <h2 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+                <Award size={14} style={{ color: "#f59e0b" }} /> Honors &amp; Awards
+              </h2>
+              <div className="flex flex-col gap-4">
+                {user.honors.map((h, i) => (
+                  <div key={i} className="border-l-2 pl-4" style={{ borderColor: "#f59e0b44" }}>
+                    <p className="text-sm font-semibold text-white">{h.name}</p>
+                    {(h.organization || h.year) && (
+                      <p className="text-xs mt-0.5" style={{ color: "#fbbf24" }}>
+                        {h.organization}{h.organization && h.year ? " · " : ""}{h.year}
+                      </p>
+                    )}
+                    {h.description && <p className="text-xs mt-1 leading-relaxed" style={{ color: "#8b8b9e" }}>{h.description}</p>}
                   </div>
                 ))}
               </div>

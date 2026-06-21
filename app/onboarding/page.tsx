@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   Camera, Plus, X, Github, Linkedin, ArrowRight, CheckCircle2,
 } from "lucide-react";
-import { disciplines, Skill, PortfolioItem } from "@/lib/mock-data";
+import { disciplines, Skill, PortfolioItem, Extracurricular, Honor } from "@/lib/mock-data";
 import { useAuth } from "@/lib/auth-context";
 import VerifiedAvatar from "@/components/VerifiedAvatar";
 
@@ -53,6 +53,21 @@ function OnboardingContent() {
   const [newPortfolioTitle, setNewPortfolioTitle] = useState("");
   const [newPortfolioUrl, setNewPortfolioUrl] = useState("");
 
+  const [extracurriculars, setExtracurriculars] = useState<Extracurricular[]>(currentUser?.extracurriculars ?? []);
+  const [newEcName, setNewEcName] = useState("");
+  const [newEcRole, setNewEcRole] = useState("");
+  const [newEcDesc, setNewEcDesc] = useState("");
+  const [newEcHours, setNewEcHours] = useState("");
+  const [newEcYears, setNewEcYears] = useState("");
+  const [showEcForm, setShowEcForm] = useState(false);
+
+  const [honors, setHonors] = useState<Honor[]>(currentUser?.honors ?? []);
+  const [newHonorName, setNewHonorName] = useState("");
+  const [newHonorOrg, setNewHonorOrg] = useState("");
+  const [newHonorYear, setNewHonorYear] = useState("");
+  const [newHonorDesc, setNewHonorDesc] = useState("");
+  const [showHonorForm, setShowHonorForm] = useState(false);
+
   const [saved, setSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -95,6 +110,27 @@ function OnboardingContent() {
 
   function removePortfolioItem(title: string) {
     setPortfolio((p) => p.filter((item) => item.title !== title));
+  }
+
+  function addExtracurricular() {
+    if (!newEcName.trim() || !newEcRole.trim()) return;
+    setExtracurriculars((e) => [...e, {
+      name: newEcName.trim(), role: newEcRole.trim(), description: newEcDesc.trim(),
+      hoursPerWeek: newEcHours ? Number(newEcHours) : undefined,
+      yearsActive: newEcYears.trim() || undefined,
+    }]);
+    setNewEcName(""); setNewEcRole(""); setNewEcDesc(""); setNewEcHours(""); setNewEcYears("");
+    setShowEcForm(false);
+  }
+
+  function addHonor() {
+    if (!newHonorName.trim()) return;
+    setHonors((h) => [...h, {
+      name: newHonorName.trim(), organization: newHonorOrg.trim() || undefined,
+      year: newHonorYear.trim() || undefined, description: newHonorDesc.trim() || undefined,
+    }]);
+    setNewHonorName(""); setNewHonorOrg(""); setNewHonorYear(""); setNewHonorDesc("");
+    setShowHonorForm(false);
   }
 
   const requiredChecks = {
@@ -140,6 +176,8 @@ function OnboardingContent() {
       skills,
       interests,
       portfolio,
+      extracurriculars,
+      honors,
       profileCompleted: isComplete,
     });
     if (navigateOnward) {
@@ -416,6 +454,113 @@ function OnboardingContent() {
               <Plus size={16} />
             </button>
           </div>
+        </div>
+
+        {/* Extracurricular Activities */}
+        <div className="rounded-2xl border p-5" style={{ backgroundColor: "#111118", borderColor: "#1e1e2e" }}>
+          <div className="flex items-center justify-between mb-3">
+            <label className="text-xs font-medium" style={{ color: "#8b8b9e" }}>Extracurricular Activities</label>
+            <button type="button" onClick={() => setShowEcForm((v) => !v)}
+              className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg transition-colors"
+              style={{ backgroundColor: "#6633ee22", color: "#a78bfa" }}>
+              <Plus size={12} /> Add
+            </button>
+          </div>
+
+          {extracurriculars.length > 0 && (
+            <div className="flex flex-col gap-3 mb-3">
+              {extracurriculars.map((ec, i) => (
+                <div key={i} className="flex items-start gap-3 p-3 rounded-xl" style={{ backgroundColor: "#0a0a0f", border: "1px solid #1e1e2e" }}>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-white">{ec.name}</p>
+                    <p className="text-xs" style={{ color: "#a78bfa" }}>{ec.role}</p>
+                    {ec.description && <p className="text-xs mt-0.5" style={{ color: "#8b8b9e" }}>{ec.description}</p>}
+                    {(ec.hoursPerWeek || ec.yearsActive) && (
+                      <p className="text-xs mt-0.5" style={{ color: "#5a5a6e" }}>
+                        {ec.hoursPerWeek ? `${ec.hoursPerWeek}h/week` : ""}
+                        {ec.hoursPerWeek && ec.yearsActive ? " · " : ""}
+                        {ec.yearsActive}
+                      </p>
+                    )}
+                  </div>
+                  <button onClick={() => setExtracurriculars((e) => e.filter((_, j) => j !== i))} style={{ color: "#8b8b9e" }} className="hover:text-white flex-shrink-0">
+                    <X size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {showEcForm && (
+            <div className="flex flex-col gap-2 p-3 rounded-xl" style={{ backgroundColor: "#0a0a0f", border: "1px solid #1e1e2e" }}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <input value={newEcName} onChange={(e) => setNewEcName(e.target.value)} placeholder="Activity name *" className="px-3 py-2 text-sm rounded-lg outline-none text-white" style={{ backgroundColor: "#111118", border: "1px solid #1e1e2e" }} />
+                <input value={newEcRole} onChange={(e) => setNewEcRole(e.target.value)} placeholder="Your role *" className="px-3 py-2 text-sm rounded-lg outline-none text-white" style={{ backgroundColor: "#111118", border: "1px solid #1e1e2e" }} />
+              </div>
+              <textarea value={newEcDesc} onChange={(e) => setNewEcDesc(e.target.value)} placeholder="Brief description" rows={2} className="px-3 py-2 text-sm rounded-lg outline-none resize-none text-white" style={{ backgroundColor: "#111118", border: "1px solid #1e1e2e" }} />
+              <div className="grid grid-cols-2 gap-2">
+                <input value={newEcHours} onChange={(e) => setNewEcHours(e.target.value)} placeholder="Hours/week (optional)" type="number" className="px-3 py-2 text-sm rounded-lg outline-none text-white" style={{ backgroundColor: "#111118", border: "1px solid #1e1e2e" }} />
+                <input value={newEcYears} onChange={(e) => setNewEcYears(e.target.value)} placeholder="e.g. 2023–2025" className="px-3 py-2 text-sm rounded-lg outline-none text-white" style={{ backgroundColor: "#111118", border: "1px solid #1e1e2e" }} />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button type="button" onClick={() => setShowEcForm(false)} className="text-xs px-3 py-1.5 rounded-lg" style={{ color: "#8b8b9e" }}>Cancel</button>
+                <button type="button" onClick={addExtracurricular} className="text-xs px-3 py-1.5 rounded-lg font-semibold text-white" style={{ background: "linear-gradient(135deg, #6633ee, #7744ff)" }}>Add activity</button>
+              </div>
+            </div>
+          )}
+
+          {extracurriculars.length === 0 && !showEcForm && (
+            <p className="text-xs" style={{ color: "#5a5a6e" }}>Clubs, competitions, volunteer work, research, sports…</p>
+          )}
+        </div>
+
+        {/* Honors & Awards */}
+        <div className="rounded-2xl border p-5" style={{ backgroundColor: "#111118", borderColor: "#1e1e2e" }}>
+          <div className="flex items-center justify-between mb-3">
+            <label className="text-xs font-medium" style={{ color: "#8b8b9e" }}>Honors &amp; Awards</label>
+            <button type="button" onClick={() => setShowHonorForm((v) => !v)}
+              className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg transition-colors"
+              style={{ backgroundColor: "#6633ee22", color: "#a78bfa" }}>
+              <Plus size={12} /> Add
+            </button>
+          </div>
+
+          {honors.length > 0 && (
+            <div className="flex flex-col gap-3 mb-3">
+              {honors.map((h, i) => (
+                <div key={i} className="flex items-start gap-3 p-3 rounded-xl" style={{ backgroundColor: "#0a0a0f", border: "1px solid #1e1e2e" }}>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-white">{h.name}</p>
+                    {h.organization && <p className="text-xs" style={{ color: "#a78bfa" }}>{h.organization}{h.year ? ` · ${h.year}` : ""}</p>}
+                    {!h.organization && h.year && <p className="text-xs" style={{ color: "#a78bfa" }}>{h.year}</p>}
+                    {h.description && <p className="text-xs mt-0.5" style={{ color: "#8b8b9e" }}>{h.description}</p>}
+                  </div>
+                  <button onClick={() => setHonors((hs) => hs.filter((_, j) => j !== i))} style={{ color: "#8b8b9e" }} className="hover:text-white flex-shrink-0">
+                    <X size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {showHonorForm && (
+            <div className="flex flex-col gap-2 p-3 rounded-xl" style={{ backgroundColor: "#0a0a0f", border: "1px solid #1e1e2e" }}>
+              <input value={newHonorName} onChange={(e) => setNewHonorName(e.target.value)} placeholder="Award / honor name *" className="px-3 py-2 text-sm rounded-lg outline-none text-white" style={{ backgroundColor: "#111118", border: "1px solid #1e1e2e" }} />
+              <div className="grid grid-cols-2 gap-2">
+                <input value={newHonorOrg} onChange={(e) => setNewHonorOrg(e.target.value)} placeholder="Organization (optional)" className="px-3 py-2 text-sm rounded-lg outline-none text-white" style={{ backgroundColor: "#111118", border: "1px solid #1e1e2e" }} />
+                <input value={newHonorYear} onChange={(e) => setNewHonorYear(e.target.value)} placeholder="Year (optional)" className="px-3 py-2 text-sm rounded-lg outline-none text-white" style={{ backgroundColor: "#111118", border: "1px solid #1e1e2e" }} />
+              </div>
+              <textarea value={newHonorDesc} onChange={(e) => setNewHonorDesc(e.target.value)} placeholder="Description (optional)" rows={2} className="px-3 py-2 text-sm rounded-lg outline-none resize-none text-white" style={{ backgroundColor: "#111118", border: "1px solid #1e1e2e" }} />
+              <div className="flex gap-2 justify-end">
+                <button type="button" onClick={() => setShowHonorForm(false)} className="text-xs px-3 py-1.5 rounded-lg" style={{ color: "#8b8b9e" }}>Cancel</button>
+                <button type="button" onClick={addHonor} className="text-xs px-3 py-1.5 rounded-lg font-semibold text-white" style={{ background: "linear-gradient(135deg, #6633ee, #7744ff)" }}>Add honor</button>
+              </div>
+            </div>
+          )}
+
+          {honors.length === 0 && !showHonorForm && (
+            <p className="text-xs" style={{ color: "#5a5a6e" }}>Scholarships, competition placements, academic awards…</p>
+          )}
         </div>
 
         {/* Social links */}

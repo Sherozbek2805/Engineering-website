@@ -36,6 +36,8 @@ function rowToUser(row: Record<string, unknown>): User {
     skills: (row.skills as User["skills"]) ?? [],
     interests: (row.interests as string[]) ?? [],
     portfolio: (row.portfolio as User["portfolio"]) ?? [],
+    extracurriculars: (row.extracurriculars as User["extracurriculars"]) ?? [],
+    honors: (row.honors as User["honors"]) ?? [],
     githubUrl: (row.github_url as string) ?? "",
     linkedinUrl: (row.linkedin_url as string) ?? "",
     availability: (row.availability as User["availability"]) ?? "Not available",
@@ -190,9 +192,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (updates.skills !== undefined) dbUpdates.skills = updates.skills;
     if (updates.interests !== undefined) dbUpdates.interests = updates.interests;
     if (updates.portfolio !== undefined) dbUpdates.portfolio = updates.portfolio;
+    if (updates.extracurriculars !== undefined) dbUpdates.extracurriculars = updates.extracurriculars;
+    if (updates.honors !== undefined) dbUpdates.honors = updates.honors;
     if (updates.profileCompleted !== undefined) dbUpdates.profile_completed = updates.profileCompleted;
     if (updates.verified !== undefined) dbUpdates.verified = updates.verified;
     if (updates.verificationProvider !== undefined) dbUpdates.verification_provider = updates.verificationProvider;
+
+    // Auto-verify when a social URL is being saved
+    const nextGithub = updates.githubUrl !== undefined ? updates.githubUrl : currentUser.githubUrl;
+    const nextLinkedin = updates.linkedinUrl !== undefined ? updates.linkedinUrl : currentUser.linkedinUrl;
+    if ((nextGithub?.trim() || nextLinkedin?.trim()) && !currentUser.verified) {
+      dbUpdates.verified = true;
+      dbUpdates.verification_provider = nextGithub?.trim() ? "github" : "linkedin";
+    }
     if (updates.availability !== undefined) dbUpdates.availability = updates.availability;
     if (updates.projectIds !== undefined) dbUpdates.project_ids = updates.projectIds;
     if (updates.joinedCommunityIds !== undefined) dbUpdates.joined_community_ids = updates.joinedCommunityIds;
